@@ -5,3 +5,6 @@ authors = ["Samuel Marks <@SamuelMarks>"]
 edition = "2018"
 
 [dependencies]
+structopt = { version = "0.2", default-features = false }
+libconsensus = {path = "../libconsensus"}
+libconsensus-lachesis-rs = {path = "../libconsensus-lachesis-rs"}
