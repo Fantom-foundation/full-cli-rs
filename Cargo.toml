@@ -8,3 +8,4 @@ edition = "2018"
 structopt = { version = "0.2", default-features = false }
 libconsensus = {path = "../libconsensus"}
 libconsensus-lachesis-rs = {path = "../libconsensus-lachesis-rs"}
+libcli = {path = "../libcli"}
