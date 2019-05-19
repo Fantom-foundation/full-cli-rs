@@ -6,6 +6,6 @@ edition = "2018"
 
 [dependencies]
 structopt = { version = "0.2", default-features = false }
-libconsensus = {path = "../libconsensus"}
-libconsensus-lachesis-rs = {path = "../libconsensus-lachesis-rs"}
-libcli = {path = "../libcli"}
+libconsensus = {git = "https://github.com/Fantom-foundation/libconsensus"}
+libconsensus-lachesis-rs = {git = "https://github.com/Fantom-foundation/libconsensus-lachesis-rs"}
+libcli = {git = "https://github.com/Fantom-foundation/libcli"}
