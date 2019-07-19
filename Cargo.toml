@@ -5,7 +5,14 @@ authors = ["Samuel Marks <@SamuelMarks>"]
 edition = "2018"
 
 [dependencies]
-structopt = { version = "0.2", default-features = false }
+configure = "0.1.1"
+env_logger = "0.6.0"
+failure = "0.1.3"
 libconsensus = {git = "https://github.com/Fantom-foundation/libconsensus"}
 libconsensus-lachesis-rs = {git = "https://github.com/Fantom-foundation/libconsensus-lachesis-rs"}
 libcli = {git = "https://github.com/Fantom-foundation/libcli"}
+ring = "0.13.4"
+serde = "1.0.80"
+serde_derive = "1.0.80"
+structopt = { version = "0.2", default-features = false }
+vm = {git = "https://github.com/Fantom-foundation/libvm-rs"}
