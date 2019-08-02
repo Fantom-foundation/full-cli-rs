@@ -1,46 +1,36 @@
-#[macro_use]
-extern crate serde_derive;
-
-use configure::Configure;
-use failure::{Error, Fail};
 use libconsensus_lachesis_rs::tcp_server::{TcpApp, TcpNode, TcpPeer};
 use libconsensus_lachesis_rs::{BTreeHashgraph, Node, Swirlds};
+use serde_derive::Deserialize;
 use std::convert::TryFrom;
+use std::fs;
 use std::io::Read;
 use std::net::TcpListener;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
+use toml;
 use vm::instruction::Program;
 use vm::Cpu;
 
-#[derive(Debug, Fail)]
-enum DvmError {
-    #[fail(display = "Wrong address {}", addr)]
-    WrongAddressFormat { addr: String },
-}
+const DEFAULT_CPU_MEMORY: usize = 1024;
+const DEFAULT_LACHESIS_PORT: usize = 9000;
+const DEFAULT_SERVER_PORT: usize = 8080;
 
-#[derive(Configure, Deserialize)]
-#[serde(default)]
+/// The initial configuration stored in `config.toml`.
+#[derive(Debug, Deserialize)]
 struct Config {
-    cpu_memory: usize,
-    lachesis_port: usize,
-    peer_hosts: String,
-    peer_ids: String,
-    server_port: usize,
+    cpu_memory: Option<usize>,
+    lachesis_port: Option<usize>,
+    server_port: Option<usize>,
+    peers: Vec<PeerConfig>,
 }
 
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            cpu_memory: 1024,
-            lachesis_port: 9000,
-            peer_ids: String::from(""),
-            peer_hosts: String::from(""),
-            server_port: 8080,
-        }
-    }
+/// The structure of a peer record in the config file.
+#[derive(Debug, Deserialize)]
+struct PeerConfig {
+    id: String,
+    ip: String,
+    port: usize,
 }
 
 struct Server {
@@ -57,23 +47,20 @@ impl Server {
         let server = self.get_server_handle();
         let node = self.node.clone();
         let queue_consumer = spawn(move || {
-            let next_to_process = 0;
             let mut cpu = Cpu::new(cpu_memory).unwrap();
             loop {
-                let events = node.node.get_ordered_events().unwrap();
+                let events = node
+                    .node
+                    .get_ordered_events()
+                    .expect("cannot get ordered events");
                 let transactions: Vec<Vec<u8>> = events
                     .iter()
-                    .flat_map(libconsensus_lachesis_rs::Event::payload)
+                    .flat_map(libconsensus_lachesis_rs::Event::transactions)
                     .collect();
-                if transactions.len() > next_to_process {
-                    for i in transactions
-                        .iter()
-                        .take(transactions.len() - 1)
-                        .skip(next_to_process)
-                    {
-                        let program = Program::try_from(i.clone()).unwrap();
-                        cpu.execute(program).unwrap();
-                    }
+                for transaction in transactions {
+                    let program = Program::try_from(transaction.clone())
+                        .expect("cannot convert transaction to program");
+                    cpu.execute(program).expect("cannot execute program");
                 }
                 sleep(Duration::from_millis(100));
             }
@@ -97,58 +84,62 @@ impl Server {
     }
 }
 
-fn parse_peer(input: String) -> Result<(String, usize), Error> {
-    let elements: Vec<String> = input
-        .clone()
-        .split(',')
-        .map(std::string::ToString::to_string)
-        .collect();
-    if elements.len() == 2 {
-        Ok((elements[0].clone(), usize::from_str(&elements[1])?))
-    } else {
-        Err(Error::from(DvmError::WrongAddressFormat { addr: input }))
-    }
+/// CLI environment obtained by interpreting the initial configuration.
+struct Env {
+    // peers: Vec<TcpPeer>,
+    // node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>,
+    app: TcpApp,
+    server: Server,
+    cpu_memory: usize,
 }
 
-fn parse_peers(input: String) -> Result<Vec<(String, usize)>, Error> {
-    input
-        .split(',')
-        .map(|ps| parse_peer(ps.to_string()))
-        .collect()
+impl Env {
+    pub fn new(config: Config) -> Self {
+        let peers: Vec<TcpPeer> = config
+            .peers
+            .iter()
+            .map(|PeerConfig { id, ip, port }| TcpPeer {
+                address: format!("{}:{}", ip, port),
+                id: id.as_bytes().to_vec(),
+            })
+            .collect();
+        let mut rng = ring::rand::SystemRandom::new();
+        let local_address = format!(
+            "0.0.0.0:{}",
+            config.lachesis_port.unwrap_or(DEFAULT_LACHESIS_PORT)
+        );
+        let node = Arc::new(TcpNode::new(&mut rng, local_address).unwrap());
+        for peer in peers.iter() {
+            node.node.add_node(Arc::new(peer.clone())).unwrap();
+        }
+        let app = TcpApp::new(node.clone());
+        let server = Server::new(
+            config.server_port.unwrap_or(DEFAULT_SERVER_PORT),
+            node.clone(),
+        );
+        let cpu_memory = config.cpu_memory.unwrap_or(DEFAULT_CPU_MEMORY);
+        Env {
+            // peers,
+            // node,
+            app,
+            server,
+            cpu_memory,
+        }
+    }
 }
 
 fn main() {
     env_logger::init();
-    let config: Config = Config::generate().unwrap();
-    let ids: Vec<String> = config
-        .peer_ids
-        .split(',')
-        .map(std::string::ToString::to_string)
-        .collect();
-    let peers = parse_peers(config.peer_hosts).unwrap();
-    if peers.len() != ids.len() {
-        panic!("Number of peer ids mismatches number of peer addresses");
+    let config_raw = fs::read_to_string("config.toml").expect("cannot read config.toml");
+    let env = Env::new(toml::from_str(config_raw.as_str()).expect("cannot parse config.toml"));
+    let mut handles = Vec::new();
+    let (handle1, handle2) = env.app.run().expect("app failed");
+    handles.push(handle1);
+    handles.push(handle2);
+    let (server_handle1, server_handle2) = env.server.run(env.cpu_memory);
+    handles.push(server_handle1);
+    handles.push(server_handle2);
+    for handle in handles {
+        handle.join().expect("thread panicked")
     }
-    let peers: Vec<TcpPeer> = ids
-        .iter()
-        .zip(peers.iter())
-        .map(|(id, (a, p))| TcpPeer {
-            address: format!("{}:{}", a, p),
-            id: id.as_bytes().to_vec(),
-        })
-        .collect();
-    let mut rng = ring::rand::SystemRandom::new();
-    let local_address = format!("0.0.0.0:{}", config.lachesis_port);
-    let node = Arc::new(TcpNode::new(&mut rng, local_address).unwrap());
-    for peer in peers.iter() {
-        node.node.add_node(Arc::new(peer.clone())).unwrap();
-    }
-    let app = TcpApp::new(node.clone());
-    let server = Server::new(config.server_port, node.clone());
-    let (handle1, handle2) = app.run().unwrap();
-    let (server_handle1, server_handle2) = server.run(config.cpu_memory);
-    handle1.join().unwrap();
-    handle2.join().unwrap();
-    server_handle1.join().unwrap();
-    server_handle2.join().unwrap();
 }
