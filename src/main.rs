@@ -1,26 +1,52 @@
-use libconsensus_lachesis_rs::tcp_server::{TcpApp, TcpNode, TcpPeer};
-use libconsensus_lachesis_rs::{BTreeHashgraph, Node, Swirlds};
-use serde_derive::Deserialize;
-use std::convert::TryFrom;
-use std::fs;
-use std::io::Read;
-use std::net::TcpListener;
-use std::sync::Arc;
-use std::thread::{sleep, spawn, JoinHandle};
-use std::time::Duration;
-use toml;
-use vm::instruction::Program;
-use vm::Cpu;
+#![feature(async_await)]
 
-const DEFAULT_CPU_MEMORY: usize = 1024;
-const DEFAULT_LACHESIS_PORT: usize = 9000;
-const DEFAULT_SERVER_PORT: usize = 8080;
+mod constants;
+mod executor;
+mod server;
+
+use std::fs;
+use std::sync::Arc;
+
+use docopt::Docopt;
+use failure;
+use futures::{self, executor::block_on};
+use libconsensus_lachesis_rs::tcp_server::{TcpApp, TcpNode, TcpPeer};
+use log::{debug, error, info};
+use serde_derive::Deserialize;
+use toml;
+
+use crate::constants::*;
+use crate::server::Server;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const USAGE: &str = "
+DAG consensus CLI
+
+Usage:
+  full-cli-rs [options]
+  full-cli-rs (--help | -h)
+  full-cli-rs --version
+
+Options:
+  -h, --help                Show this message.
+  -v, --version             Show the version of the CLI.
+  -c, --config <file>       The configuration file path.
+  -p, --server-port <port>  The server port.
+  -n, --node-port <port>    The consensus node port.
+";
+
+#[derive(Deserialize)]
+struct Args {
+    flag_config: Option<String>,
+    flag_server_port: Option<usize>,
+    flag_node_port: Option<usize>,
+}
 
 /// The initial configuration stored in `config.toml`.
 #[derive(Debug, Deserialize)]
 struct Config {
     cpu_memory: Option<usize>,
-    lachesis_port: Option<usize>,
+    node_port: Option<usize>,
     server_port: Option<usize>,
     peers: Vec<PeerConfig>,
 }
@@ -33,68 +59,16 @@ struct PeerConfig {
     port: usize,
 }
 
-struct Server {
-    node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>,
-    port: usize,
-}
-
-impl Server {
-    fn new(port: usize, node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>) -> Server {
-        Server { node, port }
-    }
-
-    fn run(self, cpu_memory: usize) -> (JoinHandle<()>, JoinHandle<()>) {
-        let server = self.get_server_handle();
-        let node = self.node.clone();
-        let queue_consumer = spawn(move || {
-            let mut cpu = Cpu::new(cpu_memory).unwrap();
-            loop {
-                let events = node
-                    .node
-                    .get_ordered_events()
-                    .expect("cannot get ordered events");
-                let transactions: Vec<Vec<u8>> = events
-                    .iter()
-                    .flat_map(libconsensus_lachesis_rs::Event::transactions)
-                    .collect();
-                for transaction in transactions {
-                    let program = Program::try_from(transaction.clone())
-                        .expect("cannot convert transaction to program");
-                    cpu.execute(program).expect("cannot execute program");
-                }
-                sleep(Duration::from_millis(100));
-            }
-        });
-        (server, queue_consumer)
-    }
-
-    fn get_server_handle(&self) -> JoinHandle<()> {
-        let port = self.port;
-        let node = self.node.clone();
-        spawn(move || {
-            let address = format!("0.0.0.0:{}", port);
-            let listener = TcpListener::bind(address).unwrap();
-            for stream_result in listener.incoming() {
-                let mut stream = stream_result.unwrap();
-                let mut content = Vec::new();
-                stream.read_to_end(&mut content).unwrap();
-                node.node.add_transaction(content).unwrap();
-            }
-        })
-    }
-}
-
 /// CLI environment obtained by interpreting the initial configuration.
+// FIXME: Requires clarification of what it is supposed to accomplish.
 struct Env {
-    // peers: Vec<TcpPeer>,
-    // node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>,
     app: TcpApp,
     server: Server,
     cpu_memory: usize,
 }
 
 impl Env {
-    pub fn new(config: Config) -> Self {
+    fn new(config: Config) -> Self {
         let peers: Vec<TcpPeer> = config
             .peers
             .iter()
@@ -105,8 +79,9 @@ impl Env {
             .collect();
         let mut rng = ring::rand::SystemRandom::new();
         let local_address = format!(
-            "0.0.0.0:{}",
-            config.lachesis_port.unwrap_or(DEFAULT_LACHESIS_PORT)
+            "{}:{}",
+            LOCALHOST,
+            config.node_port.unwrap_or(DEFAULT_NODE_PORT)
         );
         let node = Arc::new(TcpNode::new(&mut rng, local_address).unwrap());
         for peer in peers.iter() {
@@ -119,27 +94,55 @@ impl Env {
         );
         let cpu_memory = config.cpu_memory.unwrap_or(DEFAULT_CPU_MEMORY);
         Env {
-            // peers,
-            // node,
             app,
             server,
             cpu_memory,
         }
     }
+
+    fn execute(&self) {
+        // TODO: to be removed after defining a `Future` for `TcpApp`.
+        let mut app_threads = Vec::new();
+        // TODO: define an instance of `Future` for `TcpApp` and join the resulting futures with the
+        // ones of the `Server` in `Env::execute`.
+        let (thread1, thread2) = self.app.clone().run().expect("app failed");
+        app_threads.push(thread1);
+        app_threads.push(thread2);
+        match block_on(self.server.run(self.cpu_memory)) {
+            (Ok(()), _) => {}
+            (Err(e), _) => error!("{}", e),
+        }
+        // TODO: decommission as soon as `TcpApp` implements `Future`.
+        for thread in app_threads.drain(..) {
+            thread.join().expect("thread panicked");
+        }
+    }
+}
+
+/// Parses the command line arguments.
+fn parse_args() -> Result<Args, docopt::Error> {
+    Docopt::new(USAGE)?
+        .version(Some(VERSION.to_string()))
+        .parse()?
+        .deserialize()
 }
 
 fn main() {
     env_logger::init();
-    let config_raw = fs::read_to_string("config.toml").expect("cannot read config.toml");
-    let env = Env::new(toml::from_str(config_raw.as_str()).expect("cannot parse config.toml"));
-    let mut handles = Vec::new();
-    let (handle1, handle2) = env.app.run().expect("app failed");
-    handles.push(handle1);
-    handles.push(handle2);
-    let (server_handle1, server_handle2) = env.server.run(env.cpu_memory);
-    handles.push(server_handle1);
-    handles.push(server_handle2);
-    for handle in handles {
-        handle.join().expect("thread panicked")
+    info!("DAG consensus CLI version {}", VERSION);
+    let args = parse_args().unwrap_or_else(|e| e.exit());
+    let config_raw = fs::read_to_string(
+        args.flag_config
+            .unwrap_or_else(|| String::from("config.toml")),
+    )
+    .expect("cannot read config.toml");
+    let mut config: Config = toml::from_str(config_raw.as_str()).expect("cannot parse config.toml");
+    if let Some(server_port) = args.flag_server_port {
+        config.server_port = Some(server_port);
     }
+    if let Some(node_port) = args.flag_node_port {
+        config.node_port = Some(node_port);
+    }
+    debug!("Config: {:?}", config);
+    Env::new(config).execute();
 }

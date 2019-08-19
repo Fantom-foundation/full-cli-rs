@@ -30,4 +30,8 @@ $ git clone https://github.com/Fantom-foundation/full-cli-rs && cd full-cli-rs
 $ cargo test
 # Format, build and test
 $ cargo make
+# Run three nodes in a test configuration in three separate consoles:
+$ RUST_LOG=debug cargo run -- -c config/config.toml -p 10001 -n 11001
+$ RUST_LOG=debug cargo run -- -c config/config.toml -p 10002 -n 11002
+$ RUST_LOG=debug cargo run -- -c config/config.toml -p 10003 -n 11003
 ```
