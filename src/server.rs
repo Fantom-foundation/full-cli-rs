@@ -6,7 +6,7 @@ use futures;
 use libconsensus_lachesis_rs::tcp_server::{TcpNode, TcpPeer};
 use libconsensus_lachesis_rs::{BTreeHashgraph, Node, Swirlds};
 use tokio::io::AsyncReadExt;
-use tokio::net::TcpListener; //use tokio::net::TcpStream;
+use tokio::net::{TcpListener, UnixListener}; //use tokio::net::TcpStream;
 
 use crate::constants::LOCALHOST;
 use crate::executor::Executor;
@@ -23,6 +23,12 @@ pub enum Error {
     Accept(std::io::Error),
 }
 
+#[derive(Debug)]
+pub enum ListenerType {
+    UnixListener,
+    TcpListener,
+}
+
 pub struct Server {
     node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>,
     port: usize,
@@ -34,7 +40,7 @@ impl Server {
     }
 
     pub async fn run(&self, cpu_memory: usize) -> (Result<(), Error>, ()) {
-        let f = self.run_server();
+        let f = self.run_server_unix();
         let g = self.run_queue_consumer(cpu_memory);
         futures::join!(f, g)
     }
@@ -43,16 +49,44 @@ impl Server {
         Executor::new(self.node.clone(), cpu_memory).await;
     }
 
-    async fn run_server(&self) -> Result<(), Error> {
-        let port = self.port;
-        let address: SocketAddr = format!("{}:{}", LOCALHOST, port)
-            .parse()
-            .map_err(Error::Parse)?;
-        let mut listener = TcpListener::bind(&address).map_err(Error::Bind)?;
+    async fn run_server_unix(&self) -> Result<(), Error> {
+        let mut unix_socket = {
+            static PATH: &'static str = "/tmp/sock";
+            UnixListener::bind(&PATH).map_err(Error::Bind)?
+        };
+
         let node_ref = Arc::new(self.node.clone());
+
         loop {
             let node_ref = node_ref.clone();
-            let (mut socket, _) = listener.accept().await.map_err(Error::Accept)?;
+
+            let (mut socket, _) = unix_socket.accept().await.map_err(Error::Accept)?;
+
+            tokio::spawn(async move {
+                let mut buf: [u8; SOCKET_BUFFER_SIZE] = [0; SOCKET_BUFFER_SIZE];
+                // TODO: `Error` handling
+                let len = socket.read(&mut buf).await.expect("socket read failed");
+                node_ref.node.add_transaction(buf[..len].to_vec()).unwrap();
+            });
+        }
+    }
+
+    async fn run_server_tcp(&self) -> Result<(), Error> {
+        let mut tcp_listener = {
+            let port = self.port;
+            let address: SocketAddr = format!("{}:{}", LOCALHOST, port)
+                .parse()
+                .map_err(Error::Parse)?;
+            TcpListener::bind(&address).map_err(Error::Bind)?
+        };
+
+        let node_ref = Arc::new(self.node.clone());
+
+        loop {
+            let node_ref = node_ref.clone();
+
+            let (mut socket, _) = tcp_listener.accept().await.map_err(Error::Accept)?;
+
             tokio::spawn(async move {
                 let mut buf: [u8; SOCKET_BUFFER_SIZE] = [0; SOCKET_BUFFER_SIZE];
                 // TODO: `Error` handling

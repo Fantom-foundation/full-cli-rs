@@ -11,7 +11,7 @@ use libconsensus_lachesis_rs::tcp_server::{TcpNode, TcpPeer};
 use libconsensus_lachesis_rs::{BTreeHashgraph, Event, Node, Swirlds};
 use log::debug;
 use vm::instruction::Program;
-use vm::Cpu;
+use vm::{Cpu, CpuRevm};
 
 /// The new programs returned by the node.
 struct NewPrograms {
@@ -64,7 +64,7 @@ impl NewPrograms {
 }
 
 pub struct Executor {
-    cpu: Cpu,
+    cpu: CpuRevm,
     new_programs: NewPrograms,
 }
 
@@ -91,7 +91,7 @@ impl Future for Executor {
 
 impl Executor {
     pub fn new(node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>, cpu_memory: usize) -> Self {
-        let cpu = Cpu::new(cpu_memory).expect("cannot construct a CPU");
+        let cpu = CpuRevm::new(cpu_memory).expect("cannot construct a CPU");
         let new_programs = NewPrograms::new(node);
         Executor { cpu, new_programs }
     }
