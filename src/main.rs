@@ -108,26 +108,35 @@ struct Env {
 }
 
 impl Env {
-    
+
+    /// Creates new instance of Env struct. Requires a 'Config' struct to configure peers and establish
+    /// node network.
     fn new(config: Config) -> Self {
+
+        // Create a Vector of strings containing Ip + Port as TCP socket details.
         let peers: Vec<String> = config
             .peers
             .iter()
             .map(|PeerConfig { id, ip, port }| format!("{}:{}", ip, port))
             .collect();
 
+        // Set CPU memory for VM.
         let cpu_memory = config.cpu_memory.unwrap_or(DEFAULT_CPU_MEMORY);
 
+        // Randomiser
         let mut rng = ring::rand::SystemRandom::new();
 
+        // Get the local address for each node specific to its port.
         let local_address = format!(
             "{}:{}",
             LOCALHOST,
             config.node_port.unwrap_or(DEFAULT_NODE_PORT)
         );
 
+        // Check for the transport protocol and execute correct procedure for each input.
         if let Some(protocol) = config.protocol.as_ref() {
             match protocol.as_str() {
+                // TODO: Define proper method to handle setting up a tcp-based set of nodes.
                 "tcp" => { libtransport::generic_test::common_test::<TCPtransportCfg<Data>, TCPtransport<Data>>(peers);},
                 _ => { panic!("No valid transport protocol has been specified!"); }
             }
@@ -135,6 +144,7 @@ impl Env {
             panic!("No transport protocol specified!");
         }
 
+        // Return Env
         Env { cpu_memory }
     }
 
@@ -205,5 +215,6 @@ fn main() {
     // Finally, create Env struct and add config to it.
     let env = Env::new(config);
 
-    //TODO: Add function to execute data based on config and start the peer network.
+    // TODO: Add function to execute data based on config and start the peer network.
+    // env.execute();
 }
