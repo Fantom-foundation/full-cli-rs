@@ -38,6 +38,15 @@ use libtransport_tcp::{TCPtransport, TCPtransportCfg};
 use libconsensus::TransactionType;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+//! Docopt usage string configuration, currently takes in 6 variables:
+//! -h: help
+//! -v: version
+//! -c: config file
+//! -s: server port
+//! -n: node port
+//! -p: transport string
+
 const USAGE: &str = "
 DAG consensus CLI
 
@@ -53,10 +62,16 @@ Options:
   -s, --server-port <port>  The server port.
   -n, --node-port <port>    The consensus node port.
   -p, --protocol <String>   The transport protocol.
-  -
 ";
 
 /// Command line argument flags.
+///
+/// Searches the docopt cli args for specific flags, these include:
+/// > Config file location (String)
+/// > Server port (usize)
+/// > Node Port (usize)
+/// > Transport Protocol (String)
+
 /// Used in conjunction with docopt to parse cli arguments.
 #[derive(Deserialize, Debug)]
 struct Args {
@@ -67,6 +82,7 @@ struct Args {
 }
 
 /// The initial configuration stored in `config.toml`.
+/// Passed into Env for starting node peer network.
 #[derive(Debug, Deserialize)]
 struct Config {
     cpu_memory: Option<usize>,
@@ -92,6 +108,7 @@ struct Env {
 }
 
 impl Env {
+    
     fn new(config: Config) -> Self {
         let peers: Vec<String> = config
             .peers
@@ -121,6 +138,7 @@ impl Env {
         Env { cpu_memory }
     }
 
+    /// TODO: Create VMs for each peer, add consensus as argument, and start network.
     fn execute(&self) {
         //        // TODO: to be removed after defining a `Future` for `TcpApp`.
         //        let mut app_threads = Vec::new();
@@ -140,7 +158,7 @@ impl Env {
     }
 }
 
-/// Parses the command line arguments.
+/// Parses the command line arguments. (Docopt)
 fn parse_args() -> Result<Args, docopt::Error> {
     Docopt::new(USAGE)?
         .version(Some(VERSION.to_string()))
@@ -153,28 +171,39 @@ fn main() {
 
     info!("DAG consensus CLI version {}", VERSION);
 
+    // Use Docopt to parse cli arguments into a set of variables to be used in future.
     let args = parse_args().unwrap_or_else(|e| e.exit());
-    //println!("{:?}", args);
+
+    // Gather variables based on flags set in the Args struct.
     let config_raw = fs::read_to_string(
         args.flag_config
             .unwrap_or_else(|| String::from("config.toml")),
     )
     .expect("cannot read config.toml");
 
+    // Populate config string with data from config.toml
     let mut config: Config = toml::from_str(config_raw.as_str()).expect("cannot parse config.toml");
 
+    // Extract server port argument and add to config.
     if let Some(server_port) = args.flag_server_port {
         config.server_port = Some(server_port);
     }
+
+    // Extract node port argument and add to config.
     if let Some(node_port) = args.flag_node_port {
         config.node_port = Some(node_port);
     }
 
+    // Extract transport protocol argument and add to config.
     if let Some(protocol) = args.flag_protocol {
         config.protocol = Some(protocol);
     }
 
+    // Debug purposes - remove when not needed.
     debug!("Config: {:?}", config);
 
+    // Finally, create Env struct and add config to it.
     let env = Env::new(config);
+
+    //TODO: Add function to execute data based on config and start the peer network.
 }
