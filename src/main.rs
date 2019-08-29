@@ -39,13 +39,13 @@ use libconsensus::TransactionType;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-//! Docopt usage string configuration, currently takes in 6 variables:
-//! -h: help
-//! -v: version
-//! -c: config file
-//! -s: server port
-//! -n: node port
-//! -p: transport string
+/// Docopt usage string configuration, currently takes in 6 variables:
+/// -h: help
+/// -v: version
+/// -c: config file
+/// -s: server port
+/// -n: node port
+/// -p: transport string
 
 const USAGE: &str = "
 DAG consensus CLI
