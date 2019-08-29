@@ -1,5 +1,21 @@
-#![feature(async_await)]
+//! # FANTOM full cli rs
+//!
+//! Fully participating node—full-CLI—interface to the Fantom blockchain.
+//!
+//! ## FEATURES:
+//!
+//! Handles peer based consensus via a set of configurable protocols.
+//! Current protocols supported: TCP
+//! Protocols to be added: UDP, Unix Sockets
+//!
+//! ### Example Command:
+//!
+//! RUST_LOG=debug cargo run -- -c config/config.toml -s 10001 -n 11001 -p tcp
+//! RUST_LOG=debug cargo run -- -c config/config.toml -s 80 -n 81 -p udp
+//!
+//! See USAGE variable below to see input options below.
 
+#![feature(async_await)]
 mod constants;
 mod executor;
 mod server;
@@ -9,14 +25,17 @@ use std::sync::Arc;
 
 use docopt::Docopt;
 use failure;
-use futures::{self, executor::block_on};
-use libconsensus_lachesis_rs::tcp_server::{TcpApp, TcpNode, TcpPeer};
+use futures::{self, executor::block_on, StreamExt};
+use libtransport::{Transport, TransportConfiguration};
 use log::{debug, error, info};
 use serde_derive::Deserialize;
 use toml;
 
 use crate::constants::*;
-use crate::server::Server;
+use libtransport::errors::Error;
+use libtransport::generic_test::{Data, Id, TestPeerList};
+use libtransport_tcp::{TCPtransport, TCPtransportCfg};
+use libconsensus::TransactionType;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const USAGE: &str = "
@@ -31,15 +50,20 @@ Options:
   -h, --help                Show this message.
   -v, --version             Show the version of the CLI.
   -c, --config <file>       The configuration file path.
-  -p, --server-port <port>  The server port.
+  -s, --server-port <port>  The server port.
   -n, --node-port <port>    The consensus node port.
+  -p, --protocol <String>   The transport protocol.
+  -
 ";
 
-#[derive(Deserialize)]
+/// Command line argument flags.
+/// Used in conjunction with docopt to parse cli arguments.
+#[derive(Deserialize, Debug)]
 struct Args {
     flag_config: Option<String>,
     flag_server_port: Option<usize>,
     flag_node_port: Option<usize>,
+    flag_protocol: Option<String>,
 }
 
 /// The initial configuration stored in `config.toml`.
@@ -49,6 +73,7 @@ struct Config {
     node_port: Option<usize>,
     server_port: Option<usize>,
     peers: Vec<PeerConfig>,
+    protocol: Option<String>,
 }
 
 /// The structure of a peer record in the config file.
@@ -62,60 +87,56 @@ struct PeerConfig {
 /// CLI environment obtained by interpreting the initial configuration.
 // FIXME: Requires clarification of what it is supposed to accomplish.
 struct Env {
-    app: TcpApp,
-    server: Server,
+    //   server: Server,
     cpu_memory: usize,
 }
 
 impl Env {
     fn new(config: Config) -> Self {
-        let peers: Vec<TcpPeer> = config
+        let peers: Vec<String> = config
             .peers
             .iter()
-            .map(|PeerConfig { id, ip, port }| TcpPeer {
-                address: format!("{}:{}", ip, port),
-                id: id.as_bytes().to_vec(),
-            })
+            .map(|PeerConfig { id, ip, port }| format!("{}:{}", ip, port))
             .collect();
+
+        let cpu_memory = config.cpu_memory.unwrap_or(DEFAULT_CPU_MEMORY);
+
         let mut rng = ring::rand::SystemRandom::new();
+
         let local_address = format!(
             "{}:{}",
             LOCALHOST,
             config.node_port.unwrap_or(DEFAULT_NODE_PORT)
         );
-        let node = Arc::new(TcpNode::new(&mut rng, local_address).unwrap());
-        for peer in peers.iter() {
-            node.node.add_node(Arc::new(peer.clone())).unwrap();
+
+        if let Some(protocol) = config.protocol.as_ref() {
+            match protocol.as_str() {
+                "tcp" => { libtransport::generic_test::common_test::<TCPtransportCfg<Data>, TCPtransport<Data>>(peers);},
+                _ => { panic!("No valid transport protocol has been specified!"); }
+            }
+        } else {
+            panic!("No transport protocol specified!");
         }
-        let app = TcpApp::new(node.clone());
-        let server = Server::new(
-            config.server_port.unwrap_or(DEFAULT_SERVER_PORT),
-            node.clone(),
-        );
-        let cpu_memory = config.cpu_memory.unwrap_or(DEFAULT_CPU_MEMORY);
-        Env {
-            app,
-            server,
-            cpu_memory,
-        }
+
+        Env { cpu_memory }
     }
 
     fn execute(&self) {
-        // TODO: to be removed after defining a `Future` for `TcpApp`.
-        let mut app_threads = Vec::new();
-        // TODO: define an instance of `Future` for `TcpApp` and join the resulting futures with the
-        // ones of the `Server` in `Env::execute`.
-        let (thread1, thread2) = self.app.clone().run().expect("app failed");
-        app_threads.push(thread1);
-        app_threads.push(thread2);
-        match block_on(self.server.run(self.cpu_memory)) {
-            (Ok(()), _) => {}
-            (Err(e), _) => error!("{}", e),
-        }
-        // TODO: decommission as soon as `TcpApp` implements `Future`.
-        for thread in app_threads.drain(..) {
-            thread.join().expect("thread panicked");
-        }
+        //        // TODO: to be removed after defining a `Future` for `TcpApp`.
+        //        let mut app_threads = Vec::new();
+        //        // TODO: define an instance of `Future` for `TcpApp` and join the resulting futures with the
+        //        // ones of the `Server` in `Env::execute`.
+        //        let (thread1, thread2) = self.app.clone().run().expect("app failed");
+        //        app_threads.push(thread1);
+        //        app_threads.push(thread2);
+        //        match block_on(self.server.run(self.cpu_memory)) {
+        //            (Ok(()), _) => {}
+        //            (Err(e), _) => error!("{}", e),
+        //        }
+        //        // TODO: decommission as soon as `TcpApp` implements `Future`.
+        //        for thread in app_threads.drain(..) {
+        //            thread.join().expect("thread panicked");
+        //        }
     }
 }
 
@@ -129,20 +150,31 @@ fn parse_args() -> Result<Args, docopt::Error> {
 
 fn main() {
     env_logger::init();
+
     info!("DAG consensus CLI version {}", VERSION);
+
     let args = parse_args().unwrap_or_else(|e| e.exit());
+    //println!("{:?}", args);
     let config_raw = fs::read_to_string(
         args.flag_config
             .unwrap_or_else(|| String::from("config.toml")),
     )
     .expect("cannot read config.toml");
+
     let mut config: Config = toml::from_str(config_raw.as_str()).expect("cannot parse config.toml");
+
     if let Some(server_port) = args.flag_server_port {
         config.server_port = Some(server_port);
     }
     if let Some(node_port) = args.flag_node_port {
         config.node_port = Some(node_port);
     }
+
+    if let Some(protocol) = args.flag_protocol {
+        config.protocol = Some(protocol);
+    }
+
     debug!("Config: {:?}", config);
-    Env::new(config).execute();
+
+    let env = Env::new(config);
 }
