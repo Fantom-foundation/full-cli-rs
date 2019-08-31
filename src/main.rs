@@ -1,5 +1,3 @@
-#![feature(async_await)]
-
 mod constants;
 mod executor;
 mod server;
@@ -11,8 +9,10 @@ use docopt::Docopt;
 use failure;
 use futures::{self, executor::block_on};
 use libconsensus_lachesis_rs::tcp_server::{TcpApp, TcpNode, TcpPeer};
-use log::{debug, error, info};
 use serde_derive::Deserialize;
+use slog::{self, debug, error, info, o, Drain, Logger};
+use slog_async;
+use slog_term;
 use toml;
 
 use crate::constants::*;
@@ -65,10 +65,11 @@ struct Env {
     app: TcpApp,
     server: Server,
     cpu_memory: usize,
+    log: Logger,
 }
 
 impl Env {
-    fn new(config: Config) -> Self {
+    fn new(config: Config, log: Logger) -> Self {
         let peers: Vec<TcpPeer> = config
             .peers
             .iter()
@@ -91,12 +92,14 @@ impl Env {
         let server = Server::new(
             config.server_port.unwrap_or(DEFAULT_SERVER_PORT),
             node.clone(),
+            &log,
         );
         let cpu_memory = config.cpu_memory.unwrap_or(DEFAULT_CPU_MEMORY);
         Env {
             app,
             server,
             cpu_memory,
+            log,
         }
     }
 
@@ -110,7 +113,7 @@ impl Env {
         app_threads.push(thread2);
         match block_on(self.server.run(self.cpu_memory)) {
             (Ok(()), _) => {}
-            (Err(e), _) => error!("{}", e),
+            (Err(e), _) => error!(self.log, "{}", e),
         }
         // TODO: decommission as soon as `TcpApp` implements `Future`.
         for thread in app_threads.drain(..) {
@@ -128,8 +131,12 @@ fn parse_args() -> Result<Args, docopt::Error> {
 }
 
 fn main() {
-    env_logger::init();
-    info!("DAG consensus CLI version {}", VERSION);
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let log = slog::Logger::root(drain, o!());
+
+    info!(log, "DAG consensus CLI version {}", VERSION);
     let args = parse_args().unwrap_or_else(|e| e.exit());
     let config_raw = fs::read_to_string(
         args.flag_config
@@ -143,6 +150,6 @@ fn main() {
     if let Some(node_port) = args.flag_node_port {
         config.node_port = Some(node_port);
     }
-    debug!("Config: {:?}", config);
-    Env::new(config).execute();
+    debug!(log, "Config: {:?}", config);
+    Env::new(config, log).execute();
 }

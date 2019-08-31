@@ -9,9 +9,9 @@ use futures::{
 };
 use libconsensus_lachesis_rs::tcp_server::{TcpNode, TcpPeer};
 use libconsensus_lachesis_rs::{BTreeHashgraph, Event, Node, Swirlds};
-use log::debug;
+use slog::{debug, o, Logger};
 use vm::instruction::Program;
-use vm::Cpu;
+use vm::CpuRevm;
 
 /// The new programs returned by the node.
 struct NewPrograms {
@@ -19,13 +19,15 @@ struct NewPrograms {
     node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>,
     /// The index of the next program.
     program_index: usize,
+    /// The logger instance.
+    log: Logger,
 }
 
 impl Future for NewPrograms {
     type Output = Vec<Program>;
 
     fn poll(self: Pin<&mut Self>, _cxt: &mut Context) -> Poll<Self::Output> {
-        debug!("NewPrograms::<Future>::poll");
+        debug!(self.log, "NewPrograms::<Future>::poll");
         let mut_self = Pin::get_mut(self);
         let events = mut_self
             .node
@@ -49,30 +51,33 @@ impl Future for NewPrograms {
 }
 
 impl NewPrograms {
-    fn new(node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>) -> Self {
+    fn new(node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>, log: &Logger) -> Self {
+        let log = log.new(o!());
         NewPrograms {
             node,
             program_index: 0,
+            log,
         }
     }
 
     /// A wrapper for the `NewPrograms` instance of `Future::poll` that doesn't use `Pin`.
     fn poll(&mut self, cxt: &mut Context) -> Poll<Vec<Program>> {
-        debug!("NewPrograms::poll");
+        debug!(self.log, "NewPrograms::poll");
         Pin::new(self).poll(cxt)
     }
 }
 
 pub struct Executor {
-    cpu: Cpu,
+    cpu: CpuRevm,
     new_programs: NewPrograms,
+    log: Logger,
 }
 
 impl Future for Executor {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cxt: &mut Context) -> Poll<Self::Output> {
-        debug!("Executor::<Future>::poll");
+        debug!(self.log, "Executor::<Future>::poll");
         let mut_self = Pin::get_mut(self);
         match mut_self.new_programs.poll(cxt) {
             Poll::Ready(programs) => {
@@ -90,9 +95,18 @@ impl Future for Executor {
 }
 
 impl Executor {
-    pub fn new(node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>, cpu_memory: usize) -> Self {
-        let cpu = Cpu::new(cpu_memory).expect("cannot construct a CPU");
-        let new_programs = NewPrograms::new(node);
-        Executor { cpu, new_programs }
+    pub fn new(
+        node: Arc<TcpNode<Swirlds<TcpPeer, BTreeHashgraph>>>,
+        cpu_memory: usize,
+        log: &Logger,
+    ) -> Self {
+        let cpu = CpuRevm::new(cpu_memory).expect("cannot construct a CPU");
+        let log = log.new(o!());
+        let new_programs = NewPrograms::new(node, &log);
+        Executor {
+            cpu,
+            new_programs,
+            log,
+        }
     }
 }
