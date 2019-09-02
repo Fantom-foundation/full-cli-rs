@@ -1,5 +1,3 @@
-#![feature(async_await)]
-
 mod constants;
 mod executor;
 mod server;
