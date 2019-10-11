@@ -18,3 +18,4 @@ serde_derive = "1.0.101"
 tokio = "0.2.0-alpha.6"
 toml = "0.5.3"
 vm = { git = "https://github.com/Fantom-foundation/librevm-rs", branch="upgrade" }
+futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
