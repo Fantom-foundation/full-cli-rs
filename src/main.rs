@@ -1,6 +1,4 @@
-mod constants;
-mod executor;
-mod server;
+#![feature(async_await)]
 
 use std::fs;
 use std::sync::Arc;
@@ -16,37 +14,62 @@ use toml;
 use crate::constants::*;
 use crate::server::Server;
 
+mod constants;
+mod executor;
+mod server;
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const USAGE: &str = "
 DAG consensus CLI
 
 Usage:
-  full-cli-rs [options]
+  full-cli-rs [--cwd <path>] serve [--config --server-port=<port> --node-port=<port>]
+  full-cli-rs [--cwd <path>] generate [--config --peers=<N> --all]
   full-cli-rs (--help | -h)
   full-cli-rs --version
 
 Options:
-  -h, --help                Show this message.
-  -v, --version             Show the version of the CLI.
-  -c, --config <file>       The configuration file path.
-  -p, --server-port <port>  The server port.
-  -n, --node-port <port>    The consensus node port.
+  -h, --help                  Show this message.
+  -v, --version               Show the version of the CLI.
+  -c, --config <file>         The configuration file path.
+  --cwd                       Change the current working directory. Defaults to argv[0].
+  -p, --server-port <port>    The server port.
+  -n, --node-port <port>      The consensus node port.
+  -a, --address <address>...  IP address. `--address 12.7.5 --address 12334.35.35.353`
+  --number-of-address <n>
+  --port-start <port>         9000 by default.
+  --port-increment <incr>     The increment. Defaults to 2. Must be > 1.
 ";
-
-#[derive(Deserialize)]
-struct Args {
-    flag_config: Option<String>,
-    flag_server_port: Option<usize>,
-    flag_node_port: Option<usize>,
-}
 
 /// The initial configuration stored in `config.toml`.
 #[derive(Debug, Deserialize)]
 struct Config {
+    cwd: String,
+    serve_config: Option<ServeConfig>,
+    generate_config: Option<GenerateConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GenerateConfig {
+    addresses: Vec<String>,
+    n: u16,
+    port_start: u16,
+    port_increment: u16,
+}
+
+#[derive(Debug, Deserialize)]
+struct ServeConfig {
     cpu_memory: Option<usize>,
     node_port: Option<usize>,
     server_port: Option<usize>,
     peers: Vec<PeerConfig>,
+}
+
+#[derive(Deserialize)]
+struct ServeArgs {
+    flag_config: Option<String>,
+    flag_server_port: Option<usize>,
+    flag_node_port: Option<usize>,
 }
 
 /// The structure of a peer record in the config file.
@@ -118,7 +141,7 @@ impl Env {
 }
 
 /// Parses the command line arguments.
-fn parse_args() -> Result<Args, docopt::Error> {
+fn parse_args() -> Result<ServeArgs, docopt::Error> {
     Docopt::new(USAGE)?
         .version(Some(VERSION.to_string()))
         .parse()?
