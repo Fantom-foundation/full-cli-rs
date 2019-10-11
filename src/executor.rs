@@ -2,6 +2,8 @@
 use std::convert::TryFrom;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use futures::{
     future::Future,
@@ -11,7 +13,7 @@ use libconsensus_lachesis_rs::tcp_server::{TcpNode, TcpPeer};
 use libconsensus_lachesis_rs::{BTreeHashgraph, Event, Node, Swirlds};
 use log::debug;
 use vm::instruction::Program;
-use vm::{Cpu, CpuRevm};
+use vm::CpuRevm;
 
 /// The new programs returned by the node.
 struct NewPrograms {
@@ -41,10 +43,9 @@ impl Future for NewPrograms {
         if programs.len() > mut_self.program_index {
             let last_program_index = mut_self.program_index;
             mut_self.program_index = programs.len();
-            Poll::Ready(programs[last_program_index..mut_self.program_index].to_vec())
-        } else {
-            Poll::Pending
+            return Poll::Ready(programs[last_program_index..mut_self.program_index].to_vec());
         }
+        Poll::Pending
     }
 }
 
@@ -74,18 +75,20 @@ impl Future for Executor {
     fn poll(self: Pin<&mut Self>, cxt: &mut Context) -> Poll<Self::Output> {
         debug!("Executor::<Future>::poll");
         let mut_self = Pin::get_mut(self);
-        match mut_self.new_programs.poll(cxt) {
-            Poll::Ready(programs) => {
-                for program in programs {
-                    mut_self
-                        .cpu
-                        .execute(program)
-                        .expect("cannot execute program");
-                }
-                Poll::Pending
+        if let Poll::Ready(programs) = mut_self.new_programs.poll(cxt) {
+            for program in programs {
+                mut_self
+                    .cpu
+                    .execute(program)
+                    .expect("cannot execute program");
             }
-            _ => Poll::Pending,
         }
+        let waker = cxt.waker().clone();
+        thread::spawn(move || {
+            thread::sleep(Duration::from_millis(200));
+            waker.wake();
+        });
+        Poll::Pending
     }
 }
 
@@ -94,5 +97,69 @@ impl Executor {
         let cpu = CpuRevm::new(cpu_memory).expect("cannot construct a CPU");
         let new_programs = NewPrograms::new(node);
         Executor { cpu, new_programs }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::pin::Pin;
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    use futures::{
+        self,
+        executor::block_on,
+        future::Future,
+        task::{Context, Poll},
+    };
+    use log::debug;
+
+    struct Delay {
+        duration: Duration,
+        start: Instant,
+    }
+
+    impl Future for Delay {
+        type Output = ();
+
+        fn poll(self: Pin<&mut Self>, cxt: &mut Context) -> Poll<Self::Output> {
+            let myself = Pin::get_mut(self);
+            if myself.finished() {
+                debug!("Poll::Ready");
+                return Poll::Ready(());
+            }
+            debug!("Poll::Pending");
+            let waker = cxt.waker().clone();
+            // Schedule a poll in half a second.
+            thread::spawn(move || {
+                thread::sleep(Duration::from_millis(500));
+                waker.wake();
+            });
+            Poll::Pending
+        }
+    }
+
+    impl Delay {
+        fn new(duration: Duration) -> Self {
+            let start = Instant::now();
+            Delay { duration, start }
+        }
+
+        fn finished(&self) -> bool {
+            self.start.elapsed() >= self.duration
+        }
+    }
+
+    #[test]
+    fn should_delay_for_5_seconds() {
+        env_logger::init();
+        let start = Instant::now();
+        let duration = Duration::from_secs(5);
+        debug!("start: {:?}, duration: {:?}", start, duration);
+        block_on(async {
+            debug!("Delay::new");
+            Delay::new(duration).await;
+        });
+        assert!(start.elapsed() >= duration);
     }
 }
