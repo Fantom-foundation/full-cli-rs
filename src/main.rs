@@ -6,7 +6,6 @@ use std::sync::Arc;
 use docopt::Docopt;
 use failure;
 use futures::{self, executor::block_on};
-use libconsensus_lachesis_rs::tcp_server::{TcpApp, TcpNode, TcpPeer};
 use log::{debug, error, info};
 use serde_derive::Deserialize;
 use toml;
@@ -166,4 +165,34 @@ fn main() {
     }
     debug!("Config: {:?}", config);
     Env::new(config).execute();
+
+    /*
+
+    let peer_list = instantiate peer list (initial peers)?;
+    let transport = instantiate transport<UDP>(host, port)?;
+    let communication = instantiate communication<Channels>()?;
+    let vm = instantiate_vm(&communication)?;
+    let consensus = instantiate consensus(&peer_list, &transport, &communication, &vm)?;
+
+    start(consensus)?;
+    */
+
+    /*
+      let vm = VM<SolidityVM<DAGConsensus<Transport<TCP>,
+
+
+    let vm = VM::Solidity<Consensus::DAG<Transport::TCP>,
+
+     vm.run()
+
+
+    let peer_list = instantiate peer list (initial peers)?;
+    let transport = instantiate transport<UDP>(host, port)?;
+    let communication = instantiate communication<Channels>()?;
+    let consensus = instantiate consensus(&communication)?;
+    let vm = instantiate_vm(&peer_list, &transport, &communication, &consensus)?;
+    // alternatively provide a big configuration object, and pass that to `instantiate_vm`
+
+    start(consensus)?;
+    */
 }
