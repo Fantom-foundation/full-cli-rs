@@ -4,6 +4,17 @@ full-cli-rs
 
 full-cli-rs in Rust.
 
+## Purpose
+
+  0. Generate keys
+  1. Setup network
+  2. Run serve on each node in network
+  3. Run transactions against networks (tester)
+  4. Collect metrics (TPS, TTF, &etc.)
+  5. Parse metrics
+
+The idea is this could run as a CI/CD task.
+
 ## RFCs
 
 https://github.com/Fantom-foundation/fantom-rfcs
