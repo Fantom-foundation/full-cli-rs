@@ -1,14 +1,14 @@
 [package]
 name = "full-cli-rs"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Samuel Marks <@SamuelMarks>"]
 edition = "2018"
 
 [dependencies]
 docopt = "1.1.0"
 env_logger = "0.7.0"
-failure = "0.1.5"
-libconsensus = { git = "https://github.com/Fantom-foundation/libconsensus" }
+failure = "0.1.6"
+libconsensus = { git = "https://github.com/Fantom-foundation/libconsensus", version = "0.0.5" }
 # libconsensus-lachesis-rs = { git = "https://github.com/Fantom-foundation/libconsensus-lachesis-rs" }
 libcli = { git = "https://github.com/Fantom-foundation/libcli" }
 log = "0.4.8"
@@ -17,5 +17,5 @@ serde = "1.0.101"
 serde_derive = "1.0.101"
 tokio = "0.2.0-alpha.6"
 toml = "0.5.3"
-vm = { git = "https://github.com/Fantom-foundation/librevm-rs", branch="upgrade" }
+fvm = { git = "https://github.com/Fantom-foundation/evm-rs", version = "0.1.2" }
 futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
