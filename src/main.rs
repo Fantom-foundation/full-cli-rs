@@ -1,3 +1,4 @@
+#[macro_use] extern crate serde;
 use std::fs;
 
 use docopt::Docopt;
@@ -6,8 +7,12 @@ use toml;
 
 mod config;
 mod constants;
+mod dvm;
 
-use crate::config::{Config, Env, ServeArgs};
+use crate::config::{Config, Env};
+use libvm::DistributedVM;
+use crate::dvm::DVM;
+use fvm::vm::VM;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const USAGE: &str = "
@@ -34,7 +39,7 @@ Options:
 ";
 
 /// Parses the command line arguments.
-fn parse_args() -> Result<ServeArgs, docopt::Error> {
+fn parse_args() -> Result<Config, docopt::Error> {
     Docopt::new(USAGE)?
         .version(Some(VERSION.to_string()))
         .parse()?
@@ -44,22 +49,24 @@ fn parse_args() -> Result<ServeArgs, docopt::Error> {
 fn main() {
     env_logger::init();
     info!("DAG consensus CLI version {}", VERSION);
-    let args = parse_args().unwrap_or_else(|e| e.exit());
-    let config_raw = fs::read_to_string(
-        args.flag_config
-            .unwrap_or_else(|| String::from("config.toml")),
-    )
-    .expect("cannot read config.toml");
-    let mut config: Config = toml::from_str(config_raw.as_str()).expect("cannot parse config.toml");
-    if let Some(server_port) = args.flag_server_port {
-        config.server_port = Some(server_port);
-    }
-    if let Some(node_port) = args.flag_node_port {
-        config.node_port = Some(node_port);
-    }
+    let config = parse_args().unwrap_or_else(|e| e.exit());
     debug!("Config: {:?}", config);
-    let config_env = Env::new(config);
+    let config_env = Env::new(config).unwrap();
 
+    let mut threads = vec![];
+    for c in config_env.consensuses {
+        let t = std::thread::spawn(move || {
+            let mut vm = DVM::default();
+            vm.set_cpu(VM::new(vec![]));
+            vm.set_consensus(c);
+            vm.serve();
+        });
+        threads.push(t);
+    }
+
+    for t in threads {
+        t.join().unwrap();
+    }
     /*
 
     let peer_list = instantiate peer list (initial peers)?;

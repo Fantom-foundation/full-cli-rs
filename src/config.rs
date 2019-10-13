@@ -1,74 +1,70 @@
 use serde_derive::Deserialize;
 
 use crate::constants::*;
+use fvm::vm::VM;
+use libcommon_rs::peer::Peer;
+use libconsensus::{Consensus, ConsensusConfiguration};
+use libconsensus_dag::{DAGconfig, DAGPeer, DAGPeerList, DAG};
+use libhash_sha3::Hash;
+use libsignature_ed25519_dalek::{PublicKey, SecretKey, Signature};
+use libcommon_rs::data::DataType;
+use failure::Error;
+use failure::_core::fmt::Display;
+use crate::dvm::DVM;
+use libvm::DistributedVM;
 
 /// The initial configuration stored in `config.toml`.
 #[derive(Debug, Deserialize)]
 pub(crate) struct Config {
     cwd: String,
-    serve_config: Option<ServeConfig>,
-    generate_config: Option<GenerateConfig>,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct GenerateConfig {
-    addresses: Vec<String>,
-    n: u16,
-    port_start: u16,
-    port_increment: u16,
+    serve_config: ServeConfig,
 }
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ServeConfig {
-    cpu_memory: Option<usize>,
-    node_port: Option<usize>,
-    server_port: Option<usize>,
     peers: Vec<PeerConfig>,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct ServeArgs {
-    flag_config: Option<String>,
-    flag_server_port: Option<usize>,
-    flag_node_port: Option<usize>,
 }
 
 /// The structure of a peer record in the config file.
 #[derive(Debug, Deserialize)]
 pub(crate) struct PeerConfig {
     id: String,
-    ip: String,
     port: usize,
 }
+
+pub type EnvDAG = DAG<String, DAGData, SecretKey, PublicKey, Signature<Hash>>;
 
 /// CLI environment obtained by interpreting the initial configuration.
 // FIXME: Requires clarification of what it is supposed to accomplish.
 pub(crate) struct Env {
-    server: Server,
-    cpu_memory: usize,
+    pub(crate) consensuses: Vec<EnvDAG>,
+}
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct DAGData(Vec<u8>);
+
+impl Display for DAGData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Env {
-    pub(crate) fn new(config: Config) -> Self {
-        let peers: Vec<TcpPeer> = config
-            .peers
-            .iter()
-            .map(|PeerConfig { id, ip, port }| TcpPeer {
-                address: format!("{}:{}", ip, port),
-                id: id.as_bytes().to_vec(),
-            })
-            .collect();
-        let mut rng = ring::rand::SystemRandom::new();
-        let local_address = format!(
-            "{}:{}",
-            LOCALHOST,
-            config.node_port.unwrap_or(DEFAULT_NODE_PORT)
-        );
-        let cpu_memory = config.cpu_memory.unwrap_or(DEFAULT_CPU_MEMORY);
-        Env {
-            app,
-            server,
-            cpu_memory,
+    pub(crate) fn new(config: Config) -> Result<Self, Error> {
+        let mut peers = vec![];
+        for peer_config in config.serve_config.peers.iter() {
+            let net_addr = format!("localhost:{}", peer_config.port);
+            let peer: DAGPeer<_, PublicKey> = DAGPeer::new(peer_config.id.clone(), net_addr);
+            peers.push(peer)
         }
+        let peer_list = DAGPeerList::new_with_content(peers);
+        let mut consensuses = vec![];
+        for peer in config.serve_config.peers.iter() {
+            let mut config: DAGconfig<String, DAGData, SecretKey, PublicKey> = DAGconfig::new();
+            config.peers = peer_list.clone();
+            config.request_addr = format!("localhost:{}", peer.port);
+            config.reply_addr = format!("localhost:{}", peer.port+1);
+            consensuses.push(DAG::new(config)?);
+        }
+        Ok(Env { consensuses })
     }
 }
