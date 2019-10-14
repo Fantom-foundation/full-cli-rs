@@ -1,7 +1,7 @@
-use libvm::DistributedVM;
-use fvm::vm::{Opcode, VM};
 use crate::config::{DAGData, EnvDAG};
+use fvm::vm::{Opcode, VM};
 use libconsensus_dag::DAG;
+use libvm::DistributedVM;
 
 pub struct DVM {
     cpu: Option<VM>,

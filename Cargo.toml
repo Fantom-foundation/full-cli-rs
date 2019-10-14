@@ -19,7 +19,6 @@ log = "0.4.8"
 ring = "0.16.9"
 serde = "1.0.101"
 serde_derive = "1.0.101"
-tokio = { git = "https://github.com/Fantom-foundation/tokio", version = "0.2.0-alpha.6" }
 toml = "0.5.3"
 fvm = { git = "https://github.com/Fantom-foundation/evm-rs", version = "0.1.4" }
 futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }

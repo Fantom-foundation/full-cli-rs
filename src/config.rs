@@ -1,16 +1,16 @@
 use serde_derive::Deserialize;
 
 use crate::constants::*;
-use fvm::vm::VM;
-use libcommon_rs::peer::Peer;
-use libconsensus::{Consensus, ConsensusConfiguration};
-use libconsensus_dag::{DAGconfig, DAGPeer, DAGPeerList, DAG};
-use libhash_sha3::Hash;
-use libsignature_ed25519_dalek::{PublicKey, SecretKey, Signature};
-use libcommon_rs::data::DataType;
+use crate::dvm::DVM;
 use failure::Error;
 use failure::_core::fmt::Display;
-use crate::dvm::DVM;
+use fvm::vm::VM;
+use libcommon_rs::data::DataType;
+use libcommon_rs::peer::Peer;
+use libconsensus::{Consensus, ConsensusConfiguration};
+use libconsensus_dag::{DAGPeer, DAGPeerList, DAGconfig, DAG};
+use libhash_sha3::Hash;
+use libsignature_ed25519_dalek::{PublicKey, SecretKey, Signature};
 use libvm::DistributedVM;
 
 /// The initial configuration stored in `config.toml`.
@@ -62,7 +62,7 @@ impl Env {
             let mut config: DAGconfig<String, DAGData, SecretKey, PublicKey> = DAGconfig::new();
             config.peers = peer_list.clone();
             config.request_addr = format!("localhost:{}", peer.port);
-            config.reply_addr = format!("localhost:{}", peer.port+1);
+            config.reply_addr = format!("localhost:{}", peer.port + 1);
             consensuses.push(DAG::new(config)?);
         }
         Ok(Env { consensuses })

@@ -1,4 +1,5 @@
-#[macro_use] extern crate serde;
+#[macro_use]
+extern crate serde;
 use std::fs;
 
 use docopt::Docopt;
@@ -10,9 +11,9 @@ mod constants;
 mod dvm;
 
 use crate::config::{Config, Env};
-use libvm::DistributedVM;
 use crate::dvm::DVM;
 use fvm::vm::VM;
+use libvm::DistributedVM;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const USAGE: &str = "
