@@ -15,7 +15,7 @@ Generated key should be written into files specified by cmd line switches (or by
 
 1. Setup network. There should be cmd line switches (and config file parameter) specifying the number of peers in the network,
 the list of network addresses for these peers (or filename from where to read this list),
-then we need to generate private/public key for each peer,
+then we need to generate private/public key for each peer, these keys should be stored in files to be read in futhers runs of `full-cli-rs` (basically repeating structure of files in the Example at https://github.com/SamuelMarks/batch-ethkey should be enough);
 then we need to generate `peers.json` file according to `libconsensus::ConsensusType` for peer list of corresponding type,
-basically we just need to initialise this data structure in memore and the serialize in into file to be read on `full-cli-rs`
+basically we just need to initialise this data structure in memory and the serialize in into file to be read on `full-cli-rs`
 invocations with commands to run or benhmark the network.
