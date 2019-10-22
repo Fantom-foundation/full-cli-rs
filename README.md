@@ -1,6 +1,6 @@
 full-cli-rs
 ===========
-[![Build Status](https://travis-ci.org/Fantom-foundation/full-cli-rs.svg?branch=master)](https://travis-ci.org/Fantom-foundation/full-cli-rs)
+![Rust: nightly](https://img.shields.io/badge/Rust-nightly-blue.svg) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg) [![Build Status](https://travis-ci.org/Fantom-foundation/evm-rs.svg?branch=master)](https://travis-ci.org/Fantom-foundation/evm-rs)
 
 full-cli-rs in Rust.
 
