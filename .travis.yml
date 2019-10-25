@@ -2,8 +2,6 @@ dist: bionic
 language: minimal
 sudo: false
 # Default `language: rust` has problems on nightly with rustfmt support
-# rust:
-#   - nightly
 
 # only cache cargo subcommand binaries and .so libs
 # the build artifacts take a lot of space and are slower to
@@ -18,52 +16,62 @@ cache:
 # But don't cache the cargo registry
 before_cache:
   - rm -rf "$HOME"/.cargo/registry
-
 before_script:
   - |
     export PATH="$HOME/.cargo/bin:$PATH"
     TRAVIS_RUST_VERSION="${TRAVIS_RUST_VERSION:-nightly}"
     if [ "$TRAVIS_RUST_VERSION" = 'nightly' ]; then
        printf -v RUSTFMT_VERSION '%s%s' '-' "$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/rustfmt)"
-       if [ command -v rustc ]; then
-           rustup default "${TRAVIS_RUST_VERSION}${RUSTFMT_VERSION}"
+       printf -v CLIPPY_VERSION '%s%s' '-' "$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/clippy)"
+       SMALLEST_COMPAT_RUST="$([[ "$RUSTFMT_VERSION" < "$CLIPPY_VERSION" ]] && echo "$RUSTFMT_VERSION" || echo "$CLIPPY_VERSION")"
+
+       if command -v rustup 2>/dev/null; then
+           rustup default "${TRAVIS_RUST_VERSION}${SMALLEST_COMPAT_RUST}"
        else
-           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "${TRAVIS_RUST_VERSION}${RUSTFMT_VERSION}"
+           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "${TRAVIS_RUST_VERSION}${SMALLEST_COMPAT_RUST}"
        fi
     fi
     if command -v cargo >/dev/null; then
       export PATH="$HOME/.cargo/bin:$PATH"
-      mkdir "$PWD"/socket
-      export XDG_RUNTIME_DIR="$PWD/socket"
+      export XDG_RUNTIME_DIR="$PWD"'/socket'
+      mkdir "$XDG_RUNTIME_DIR"
       cargo fetch
+      rustup component add rustfmt
     fi
     if [ -n "$CLIPPY" ]; then
-      rustup component add clippy --toolchain "${TRAVIS_RUST_VERSION}${RUSTFMT_VERSION}"
+      rustup component add clippy --toolchain "${TRAVIS_RUST_VERSION}${SMALLEST_COMPAT_RUST}"
     elif [ -n "$BUILD_FMT" ]; then
-      rustup component add rustfmt --toolchain "${TRAVIS_RUST_VERSION}${RUSTFMT_VERSION}"
+      rustup component add rustfmt --toolchain "${TRAVIS_RUST_VERSION}${SMALLEST_COMPAT_RUST}"
     fi
-
 script:
   - |
     if [ -n "$BUILD_FMT" ]; then
       cargo fmt --all -- --check
-      # rustfmt --check "$(find -name '*.rs' -not -path './target/*')"
+      # rustfmt --check # With: `src/*.rs` xor `"$(find -name '*.rs' -not -path './target/*')"`
     elif [ -n "$CLIPPY" ]; then
-      cargo clippy --all -- -D warnings \
-                   -A clippy::deprecated_cfg_attr \
-                   -A clippy::for_loop_over_option
+      cargo clippy --all -- -D warnings
     elif [ -n "$CARGO_TEST" ]; then
       cargo test --all --features "$FEATURES"
     fi
 
 matrix:
   include:
-    - rust: nightly
+    - rust: stable
       env: BUILD_FMT=1
-    - rust: nightly
+    - rust: stable
       env: CLIPPY=1
-    - rust: nightly
+    - rust: stable
       env: CARGO_TEST=1
-      notifications:
-        slack:
-          secure: 'UzMDp+QAQmykQRh3X2zPZnxICvEH9YPynCPQ6AEsmdVb9Or3VleaYM8i+E7x5jT1HFloBJyI1G0mqrFQIbYDQug5nFUsfB2CYi7L0dpUtvoWbDMGoJ/lDI/wJDt64lqhHf9hs1aeYq454Zqcmx6/oKCgnRSyXip6y/mtOlQYjwhGN0D+TARF+6IohqJMg5iEQg4sWvugVur3GbFbatNeevLOYuhezdun4S8vhzQKsFJBK5QnIuufEyeHHjA3Ii5/yyqXUnxtRnLctjPWR+EROBO/mgqBUXPTwheiYqg9Gw9lYSRuBrtP+eixSKWnknju12YzlhAIF/HegRGzLG2PUGgLuB0TBAraaLYOODpBanVfN7DMvhg72Embdy0lZzVYPN8ImwGIU7jisWPI3x6Zz3zdI1lXZaMFS2ijlbRbYZE1YoOhS0iFQuYUc4dwu+D9Ql+IqZZ+BwE5AOy3cY149WrwGX0xaqwPad80HNHy5PUKKLxE8ZLXD0AQsWxi5M7UrHvJ7XOMRPEkskm6zNBuSXrU1vRibbtOaAC+xdPWop5j0Chf99CuIyH6NeqWVwpvl8ddTJGFZeoNXBXOp6+WAxyAJa1Z77rOvmjhdgrvcFh0o3176KCpFBQM0rWt1IVy1LFFsCP9KzMjBN1vAeEaCJZF0yQjXg/58lUTnR5a28A='
+    - stage: notify-website
+      env:
+        secure: 'R58SWJSqutrjl+CMSwJbc/zJObVdNKy9Ai3XM28YitgoLDDbiLO7RIjSYU6Y9XS5X3+z0Qg0xgLODRSUYWd5la3EXmYnTsrv/Ehc6IHXeJ6sWDlRyyfYV1Mn5aNHwKEU0HToD5nq1FpCgAdmBrS2jMupmkBqWS5ajL/4yWNwNGHinsUxR12M6cgHPZrOMZJVt+DBQhYMIF7m+r6cSeyJJPfNnSNZ6nuOP7KOywAovnS0rEKmHsgpT7g7psWQ1OzVXINJXPJ26ZPCw8dqgn/Pd3oe2NhaDpZLyQCLrm+rBPmMv+IzLpPRHDJRYrPsOgdHXwNqfIcCwoJ4aMRUUmyS4stb2F4lvOSQWhGexAhytsRiD3kagZjBRMCk0m6iDtcuq4aOtf5w1P4FV794YquEnAm/SygFV9oq7vaf1titN/FgbEX3BnJHdZi+sn7fsbPWLhZZJchG67pj++MjDkla6JmYiP7Qc6YMbheUuyk3kRrgpSVBnB3C9vQGVO0RhcxpMa4uYdu0C/4yEmLXGpQ14F9G+CoI9F0N6F6Ny5o4TVdDzGRaGQf30hCoT/aXKCl87k4OoK+3oMYTjtTsCBjtyEYJ8f8yQcObCRd8aIxu13du+MTBhH8gYvuZMoY7DiuDtE6wTDeRGYWBsCanLyme3yAd4dUixzy0S3z525/p5Ps='
+      script:
+        - email_author="$(git log -1 --pretty=format:'%an <%ce>')"
+        - author="${email_author% *}"; git config --global user.name "$author"
+        - email="${email_author#*<}"; email="${email::-1}"; git config --global user.email "$email"
+        - git clone https://SamuelMarks:$GH_TOKEN@github.com/Fantom-foundation/fantom-dev-web
+          && cd fantom-dev-web
+        - echo "  | [$TRAVIS_REPO_SLUG](https://github.com/$TRAVIS_REPO_SLUG) | [$TRAVIS_COMMIT_MESSAGE](https://github.com/$TRAVIS_REPO_SLUG/commit/$TRAVIS_COMMIT) |" >> CHANGESLOG.md
+        - git add CHANGESLOG.md
+        - git commit -m "[CHANGESLOG.md] $TRAVIS_REPO_SLUG - $TRAVIS_COMMIT_MESSAGE" 
+        - git push -u origin master
