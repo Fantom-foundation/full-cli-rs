@@ -668,7 +668,7 @@ dependencies = [
 [[package]]
 name = "libconsensus-dag"
 version = "0.0.7"
-source = "git+https://github.com/Fantom-foundation/libconsensus-dag#aac2d8fde6ce1dfc4ea0b5a9bea1b7bf5ec85651"
+source = "git+https://github.com/Fantom-foundation/libconsensus-dag#3aab6458c1fb82c6703a9aee194d1bb04180d072"
 dependencies = [
  "async-timer 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bincode 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
