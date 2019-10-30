@@ -2,9 +2,9 @@ use serde_derive::Deserialize;
 
 use crate::constants::*;
 use crate::dvm::DVM;
+use evm_rs::vm::VM;
 use failure::Error;
 use failure::_core::fmt::Display;
-use fvm::vm::VM;
 use libcommon_rs::data::DataType;
 use libcommon_rs::peer::Peer;
 use libconsensus::{Consensus, ConsensusConfiguration};

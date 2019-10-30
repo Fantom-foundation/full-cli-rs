@@ -12,7 +12,7 @@ mod dvm;
 
 use crate::config::{Config, Env};
 use crate::dvm::DVM;
-use fvm::vm::VM;
+use evm_rs::vm::VM;
 use libvm::DistributedVM;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");

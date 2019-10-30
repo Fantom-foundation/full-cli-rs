@@ -1,25 +1,26 @@
 [package]
 name = "full-cli-rs"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Samuel Marks <@SamuelMarks>"]
 edition = "2018"
 
 [dependencies]
 docopt = "1.1.0"
 env_logger = "0.7.0"
+ethereum-types = "0.8.0"
 failure = "0.1.6"
 libcommon-rs = { git = "https://github.com/Fantom-foundation/libcommon-rs", version = "0.0.1" }
-libconsensus = { git = "https://github.com/Fantom-foundation/libconsensus", version = "0.0.5" }
-libconsensus-dag = { git = "https://github.com/Fantom-foundation/libconsensus-dag", version = "0.0.7" }
+libconsensus = { git = "https://github.com/Fantom-foundation/libconsensus", version = "0.0.7" }
+libconsensus-dag = { git = "https://github.com/Fantom-foundation/libconsensus-dag", version = "0.0.15" }
 # libconsensus-lachesis-rs = { git = "https://github.com/Fantom-foundation/libconsensus-lachesis-rs" }
 libcli = { git = "https://github.com/Fantom-foundation/libcli" }
-libhash-sha3 = { git = "https://github.com/Fantom-foundation/libhash-sha3" }
-libvm = { git = "https://github.com/Fantom-foundation/libvm" }
+libhash-sha3 = { git = "https://github.com/Fantom-foundation/libhash-sha3", version = "0.1.1" }
+libvm = { git = "https://github.com/Fantom-foundation/libvm", version = "0.1.5" }
 log = "0.4.8"
 ring = "0.16.9"
 serde = "1.0.101"
 serde_derive = "1.0.101"
 toml = "0.5.3"
-fvm = { git = "https://github.com/Fantom-foundation/evm-rs", version = "0.1.4" }
+evm-rs = { git = "https://github.com/Fantom-foundation/evm-rs", version = "0.1.8" }
 futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
-libsignature-ed25519-dalek = { git = "https://github.com/Fantom-foundation/libsignature-ed25519-dalek", version = "0.1.0"}
+libsignature-ed25519-dalek = { git = "https://github.com/Fantom-foundation/libsignature-ed25519-dalek", version = "0.2.2"}

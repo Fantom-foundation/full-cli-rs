@@ -1,5 +1,6 @@
 use crate::config::{DAGData, EnvDAG};
-use fvm::vm::{Opcode, VM};
+use ethereum_types::H160;
+use evm_rs::vm::{Opcode, VM};
 use libconsensus_dag::DAG;
 use libvm::DistributedVM;
 
@@ -17,7 +18,7 @@ impl Default for DVM {
     }
 }
 
-impl<'a> DistributedVM<'a, VM, Opcode, DAGData, EnvDAG> for DVM {
+impl<'a> DistributedVM<'a, VM, Opcode, DAGData, EnvDAG, H160> for DVM {
     fn set_cpu(&mut self, cpu: VM) {
         self.cpu = Some(cpu);
     }
