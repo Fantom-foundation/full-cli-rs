@@ -40,7 +40,7 @@ pub(crate) struct Env {
     pub(crate) consensuses: Vec<EnvDAG>,
 }
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct DAGData(Vec<u8>);
+pub struct DAGData(pub Vec<u8>);
 
 impl Display for DAGData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {

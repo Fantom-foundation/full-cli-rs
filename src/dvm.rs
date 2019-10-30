@@ -1,6 +1,9 @@
 use crate::config::{DAGData, EnvDAG};
 use ethereum_types::H160;
+use evm_rs::transaction::Transaction;
 use evm_rs::vm::{Opcode, VM};
+use failure::Error;
+use libconsensus::Consensus;
 use libconsensus_dag::DAG;
 use libvm::DistributedVM;
 
@@ -15,6 +18,17 @@ impl Default for DVM {
             cpu: None,
             algorithm: None,
         }
+    }
+}
+
+impl DVM {
+    pub fn send_transaction(&mut self, transaction: Transaction) -> Result<(), Error> {
+        if let Some(a) = &mut self.algorithm {
+            let transaction_data = serde_json::to_vec(&transaction)?;
+            let data = DAGData(transaction_data);
+            a.send_transaction(data)?;
+        }
+        Ok(())
     }
 }
 

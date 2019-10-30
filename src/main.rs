@@ -12,6 +12,7 @@ mod dvm;
 
 use crate::config::{Config, Env};
 use crate::dvm::DVM;
+use evm_rs::transaction::Transaction;
 use evm_rs::vm::VM;
 use libvm::DistributedVM;
 
@@ -58,8 +59,20 @@ fn main() {
     for c in config_env.consensuses {
         let t = std::thread::spawn(move || {
             let mut vm = DVM::default();
+            let transaction: Transaction = Transaction {
+                nonce: 0.into(),
+                gas_price: 0.into(),
+                start_gas: 0.into(),
+                to: None,
+                value: 0.into(),
+                data: vec![],
+                v: 0.into(),
+                r: 0.into(),
+                s: 0.into(),
+            };
             vm.set_cpu(VM::new(vec![]));
             vm.set_consensus(c);
+            vm.send_transaction(transaction).unwrap();
             vm.serve();
         });
         threads.push(t);

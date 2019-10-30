@@ -447,8 +447,8 @@ dependencies = [
 
 [[package]]
 name = "evm-rs"
-version = "0.1.8"
-source = "git+https://github.com/Fantom-foundation/evm-rs#ae58a8395571c86ca1788b201f956c116a6a7b96"
+version = "0.1.9"
+source = "git+https://github.com/Fantom-foundation/evm-rs#3f3c7277fb347c2accdb9fd99fb84de586a444e0"
 dependencies = [
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "devp2p-secp256k1 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -546,12 +546,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "full-cli-rs"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "docopt 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethereum-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "evm-rs 0.1.8 (git+https://github.com/Fantom-foundation/evm-rs)",
+ "evm-rs 0.1.9 (git+https://github.com/Fantom-foundation/evm-rs)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "libcli 0.0.1 (git+https://github.com/Fantom-foundation/libcli)",
@@ -565,6 +565,7 @@ dependencies = [
  "ring 0.16.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1930,7 +1931,7 @@ dependencies = [
 "checksum etcommon-trie 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c2f51f2734e5391cc8dfeeff6286a71213405837e31d581d4aa6af15316430cb"
 "checksum ethbloom 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "32cfe1c169414b709cf28aa30c74060bdb830a03a8ba473314d079ac79d80a5f"
 "checksum ethereum-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ba744248e3553a393143d5ebb68939fc3a4ec0c22a269682535f5ffe7fed728c"
-"checksum evm-rs 0.1.8 (git+https://github.com/Fantom-foundation/evm-rs)" = "<none>"
+"checksum evm-rs 0.1.9 (git+https://github.com/Fantom-foundation/evm-rs)" = "<none>"
 "checksum failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "f8273f13c977665c5db7eb2b99ae520952fe5ac831ae4cd09d80c4c7042b5ed9"
 "checksum failure_derive 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "0bc225b78e0391e4b8683440bf2e63c2deeeb2ce5189eab46e2b68c6d3725d08"
 "checksum fake-simd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
