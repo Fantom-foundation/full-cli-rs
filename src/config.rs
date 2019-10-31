@@ -10,6 +10,7 @@ use libcommon_rs::peer::Peer;
 use libconsensus::{Consensus, ConsensusConfiguration};
 use libconsensus_dag::{DAGPeer, DAGPeerList, DAGconfig, DAG};
 use libhash_sha3::Hash;
+use libsignature::Signature as LibSignature;
 use libsignature_ed25519_dalek::{PublicKey, SecretKey, Signature};
 use libvm::DistributedVM;
 
@@ -59,10 +60,16 @@ impl Env {
         let peer_list = DAGPeerList::new_with_content(peers);
         let mut consensuses = vec![];
         for peer in config.serve_config.peers.iter() {
+            let kp = Signature::<Hash>::generate_key_pair().unwrap();
             let mut config: DAGconfig<String, DAGData, SecretKey, PublicKey> = DAGconfig::new();
             config.peers = peer_list.clone();
             config.request_addr = format!("localhost:{}", peer.port);
             config.reply_addr = format!("localhost:{}", peer.port + 1);
+            config.transport_type = libtransport::TransportType::TCP;
+            config.store_type = libcommon_rs::store::StoreType::Sled;
+            config.creator = peer.id.clone();
+            config.public_key = kp.0;
+            config.secret_key = kp.1;
             consensuses.push(DAG::new(config)?);
         }
         Ok(Env { consensuses })
