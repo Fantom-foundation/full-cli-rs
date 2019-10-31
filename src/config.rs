@@ -1,18 +1,18 @@
 use serde_derive::Deserialize;
 
-use crate::constants::*;
-use crate::dvm::DVM;
-use evm_rs::vm::VM;
+//use crate::constants::*;
+//use crate::dvm::DVM;
+//use evm_rs::vm::VM;
 use failure::Error;
 use failure::_core::fmt::Display;
-use libcommon_rs::data::DataType;
+//use libcommon_rs::data::DataType;
 use libcommon_rs::peer::Peer;
 use libconsensus::{Consensus, ConsensusConfiguration};
 use libconsensus_dag::{DAGPeer, DAGPeerList, DAGconfig, DAG};
 use libhash_sha3::Hash;
-use libsignature::Signature as LibSignature;
 use libsignature_ed25519_dalek::{PublicKey, SecretKey, Signature};
-use libvm::DistributedVM;
+//use libvm::DistributedVM;
+use libsignature::Signature as LibSignature;
 
 /// The initial configuration stored in `config.toml`.
 #[derive(Debug, Deserialize)]
