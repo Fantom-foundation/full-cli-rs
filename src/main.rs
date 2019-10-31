@@ -87,6 +87,7 @@ fn main() {
     let config_env = Env::new(config).unwrap();
 
     let mut threads = vec![];
+    let mut counter = 0;
     for c in config_env.consensuses {
         let t = std::thread::spawn(move || {
             let mut vm = DVM::default();
@@ -96,7 +97,7 @@ fn main() {
                 start_gas: 0.into(),
                 to: None,
                 value: 0.into(),
-                data: vec![],
+                data: vec![0x60+counter],
                 v: 0.into(),
                 r: 0.into(),
                 s: 0.into(),
@@ -107,6 +108,7 @@ fn main() {
             vm.serve();
         });
         threads.push(t);
+        counter += 1;
     }
 
     for t in threads {
