@@ -3,8 +3,9 @@ use ethereum_types::H160;
 use evm_rs::transaction::Transaction;
 use evm_rs::vm::{Opcode, VM};
 use failure::Error;
+use futures::executor::block_on;
+use futures::stream::StreamExt;
 use libconsensus::Consensus;
-use libconsensus_dag::DAG;
 use libvm::DistributedVM;
 
 pub struct DVM {
@@ -41,7 +42,17 @@ impl<'a> DistributedVM<'a, VM, Opcode, DAGData, EnvDAG, H160> for DVM {
         self.algorithm = Some(algorithm);
     }
 
-    fn serve(self) {
-        unimplemented!()
+    fn serve(mut self) {
+        if let Some(a) = &mut self.algorithm {
+            loop {
+                // FIXME: check for exit condition here and do exit when met
+                block_on(async {
+                    if let Some(tx) = a.next().await {
+                        // FIXME: we have received transaction tx from Consensus
+                        // now we need to execute it on VM
+                    }
+                });
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "full-cli-rs"
-version = "0.0.5"
+version = "0.0.6"
 authors = ["Samuel Marks <@SamuelMarks>"]
 edition = "2018"
 
