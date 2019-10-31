@@ -25,9 +25,7 @@ impl Default for DVM {
 impl DVM {
     pub fn send_transaction(&mut self, transaction: Transaction) -> Result<(), Error> {
         if let Some(a) = &mut self.algorithm {
-            let transaction_data = serde_json::to_vec(&transaction)?;
-            let data = DAGData(transaction_data);
-            a.send_transaction(data)?;
+            a.send_transaction(transaction)?;
         }
         Ok(())
     }

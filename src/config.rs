@@ -1,10 +1,10 @@
+use crate::constants::LOCALHOST;
 use serde_derive::Deserialize;
 
 //use crate::constants::*;
 //use crate::dvm::DVM;
 //use evm_rs::vm::VM;
 use failure::Error;
-use failure::_core::fmt::Display;
 //use libcommon_rs::data::DataType;
 use libcommon_rs::peer::Peer;
 use libconsensus::{Consensus, ConsensusConfiguration};
@@ -12,26 +12,29 @@ use libconsensus_dag::{DAGPeer, DAGPeerList, DAGconfig, DAG};
 use libhash_sha3::Hash;
 use libsignature_ed25519_dalek::{PublicKey, SecretKey, Signature};
 //use libvm::DistributedVM;
+use libcommon_rs::peer::PeerList;
 use libsignature::Signature as LibSignature;
 
 /// The initial configuration stored in `config.toml`.
 #[derive(Debug, Deserialize)]
 pub(crate) struct Config {
-    cwd: String,
-    serve_config: ServeConfig,
+    pub(crate) cwd: String,
+    pub(crate) serve_config: ServeConfig,
 }
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ServeConfig {
-    peers: Vec<PeerConfig>,
+    pub(crate) peers: Vec<PeerConfig>,
 }
 
 /// The structure of a peer record in the config file.
 #[derive(Debug, Deserialize)]
 pub(crate) struct PeerConfig {
-    id: String,
-    port: usize,
+    pub(crate) id: String,
+    pub(crate) port: usize,
 }
+
+pub type DAGData = evm_rs::transaction::Transaction;
 
 pub type EnvDAG = DAG<String, DAGData, SecretKey, PublicKey, Signature<Hash>>;
 
@@ -40,37 +43,34 @@ pub type EnvDAG = DAG<String, DAGData, SecretKey, PublicKey, Signature<Hash>>;
 pub(crate) struct Env {
     pub(crate) consensuses: Vec<EnvDAG>,
 }
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct DAGData(pub Vec<u8>);
-
-impl Display for DAGData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{:?}", self)
-    }
-}
 
 impl Env {
     pub(crate) fn new(config: Config) -> Result<Self, Error> {
-        let mut peers = vec![];
-        for peer_config in config.serve_config.peers.iter() {
-            let net_addr = format!("localhost:{}", peer_config.port);
-            let peer: DAGPeer<_, PublicKey> = DAGPeer::new(peer_config.id.clone(), net_addr);
-            peers.push(peer)
+        let n = config.serve_config.peers.len();
+        let mut kp: Vec<(PublicKey, SecretKey)> = Vec::with_capacity(n);
+        let mut peer_list = DAGPeerList::<String, PublicKey>::default();
+
+        for i in 0..n {
+            kp.push(Signature::<Hash>::generate_key_pair().unwrap());
+            let net_addr = format!("{}:{}", LOCALHOST, config.serve_config.peers[i].port);
+            let mut peer: DAGPeer<String, PublicKey> =
+                DAGPeer::new(config.serve_config.peers[i].id.clone(), net_addr);
+            peer.set_public_key(kp[i].0.clone());
+            peer_list.add(peer)?;
         }
-        let peer_list = DAGPeerList::new_with_content(peers);
+
         let mut consensuses = vec![];
-        for peer in config.serve_config.peers.iter() {
-            let kp = Signature::<Hash>::generate_key_pair().unwrap();
-            let mut config: DAGconfig<String, DAGData, SecretKey, PublicKey> = DAGconfig::new();
-            config.peers = peer_list.clone();
-            config.request_addr = format!("localhost:{}", peer.port);
-            config.reply_addr = format!("localhost:{}", peer.port + 1);
-            config.transport_type = libtransport::TransportType::TCP;
-            config.store_type = libcommon_rs::store::StoreType::Sled;
-            config.creator = peer.id.clone();
-            config.public_key = kp.0;
-            config.secret_key = kp.1;
-            consensuses.push(DAG::new(config)?);
+        for i in 0..n {
+            let mut cfg: DAGconfig<String, DAGData, SecretKey, PublicKey> = DAGconfig::new();
+            cfg.peers = peer_list.clone();
+            cfg.request_addr = format!("{}:{}", LOCALHOST, config.serve_config.peers[i].port);
+            cfg.reply_addr = format!("{}:{}", LOCALHOST, config.serve_config.peers[i].port + 1);
+            cfg.transport_type = libtransport::TransportType::TCP;
+            cfg.store_type = libcommon_rs::store::StoreType::Sled;
+            cfg.creator = config.serve_config.peers[i].id.clone();
+            cfg.public_key = kp[i].0.clone();
+            cfg.secret_key = kp[i].1.clone();
+            consensuses.push(DAG::new(cfg)?);
         }
         Ok(Env { consensuses })
     }

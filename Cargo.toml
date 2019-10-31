@@ -11,7 +11,7 @@ ethereum-types = "0.8.0"
 failure = "0.1.6"
 libcommon-rs = { git = "https://github.com/Fantom-foundation/libcommon-rs", version = "0.0.2" }
 libconsensus = { git = "https://github.com/Fantom-foundation/libconsensus", version = "0.0.7" }
-libconsensus-dag = { git = "https://github.com/Fantom-foundation/libconsensus-dag", version = "0.0.17" }
+libconsensus-dag = { git = "https://github.com/Fantom-foundation/libconsensus-dag", version = "0.0.18" }
 # libconsensus-lachesis-rs = { git = "https://github.com/Fantom-foundation/libconsensus-lachesis-rs" }
 libcli = { git = "https://github.com/Fantom-foundation/libcli" }
 libhash-sha3 = { git = "https://github.com/Fantom-foundation/libhash-sha3", version = "0.1.1" }
@@ -22,7 +22,7 @@ serde = "1.0.101"
 serde_json = "1.0.41"
 serde_derive = "1.0.101"
 toml = "0.5.3"
-evm-rs = { git = "https://github.com/Fantom-foundation/evm-rs", version = "0.1.9" }
+evm-rs = { git = "https://github.com/Fantom-foundation/evm-rs", version = "0.1.11" }
 futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
 libsignature = { git = "https://github.com/Fantom-foundation/libsignature", version="~0.2.0" }
 libsignature-ed25519-dalek = { git = "https://github.com/Fantom-foundation/libsignature-ed25519-dalek", version = "0.2.2"}
