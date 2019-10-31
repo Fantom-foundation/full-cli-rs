@@ -546,7 +546,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "full-cli-rs"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "docopt 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -557,7 +557,7 @@ dependencies = [
  "libcli 0.0.1 (git+https://github.com/Fantom-foundation/libcli)",
  "libcommon-rs 0.0.1 (git+https://github.com/Fantom-foundation/libcommon-rs)",
  "libconsensus 0.0.7 (git+https://github.com/Fantom-foundation/libconsensus)",
- "libconsensus-dag 0.0.15 (git+https://github.com/Fantom-foundation/libconsensus-dag)",
+ "libconsensus-dag 0.0.16 (git+https://github.com/Fantom-foundation/libconsensus-dag)",
  "libhash-sha3 0.1.1 (git+https://github.com/Fantom-foundation/libhash-sha3)",
  "libsignature-ed25519-dalek 0.2.2 (git+https://github.com/Fantom-foundation/libsignature-ed25519-dalek)",
  "libvm 0.1.5 (git+https://github.com/Fantom-foundation/libvm)",
@@ -834,8 +834,8 @@ dependencies = [
 
 [[package]]
 name = "libconsensus-dag"
-version = "0.0.15"
-source = "git+https://github.com/Fantom-foundation/libconsensus-dag#a2fae0eb695bd329fd8a20e9ecbcfb38d12138cd"
+version = "0.0.16"
+source = "git+https://github.com/Fantom-foundation/libconsensus-dag#126e28f60a2137391f4a263433c4998b03dcb47a"
 dependencies = [
  "async-timer 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bincode 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -849,7 +849,7 @@ dependencies = [
  "libhash-sha3 0.1.1 (git+https://github.com/Fantom-foundation/libhash-sha3)",
  "libsignature 0.2.0 (git+https://github.com/Fantom-foundation/libsignature)",
  "libtransport 0.0.4 (git+https://github.com/Fantom-foundation/libtransport)",
- "libtransport-tcp 0.0.5 (git+https://github.com/Fantom-foundation/libtransport-tcp)",
+ "libtransport-tcp 0.0.6 (git+https://github.com/Fantom-foundation/libtransport-tcp)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "os_pipe 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -925,8 +925,8 @@ dependencies = [
 
 [[package]]
 name = "libtransport-tcp"
-version = "0.0.5"
-source = "git+https://github.com/Fantom-foundation/libtransport-tcp#e4ed04698d26247873b98c1fd64cf923b701d08c"
+version = "0.0.6"
+source = "git+https://github.com/Fantom-foundation/libtransport-tcp#35ad6f4967c8eca5dcdb281976de2cfbe8b0df06"
 dependencies = [
  "bincode 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "buffer 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1973,13 +1973,13 @@ dependencies = [
 "checksum libcli 0.0.1 (git+https://github.com/Fantom-foundation/libcli)" = "<none>"
 "checksum libcommon-rs 0.0.1 (git+https://github.com/Fantom-foundation/libcommon-rs)" = "<none>"
 "checksum libconsensus 0.0.7 (git+https://github.com/Fantom-foundation/libconsensus)" = "<none>"
-"checksum libconsensus-dag 0.0.15 (git+https://github.com/Fantom-foundation/libconsensus-dag)" = "<none>"
+"checksum libconsensus-dag 0.0.16 (git+https://github.com/Fantom-foundation/libconsensus-dag)" = "<none>"
 "checksum libhash 0.1.1 (git+https://github.com/Fantom-foundation/libhash)" = "<none>"
 "checksum libhash-sha3 0.1.1 (git+https://github.com/Fantom-foundation/libhash-sha3)" = "<none>"
 "checksum libsignature 0.2.0 (git+https://github.com/Fantom-foundation/libsignature)" = "<none>"
 "checksum libsignature-ed25519-dalek 0.2.2 (git+https://github.com/Fantom-foundation/libsignature-ed25519-dalek)" = "<none>"
 "checksum libtransport 0.0.4 (git+https://github.com/Fantom-foundation/libtransport)" = "<none>"
-"checksum libtransport-tcp 0.0.5 (git+https://github.com/Fantom-foundation/libtransport-tcp)" = "<none>"
+"checksum libtransport-tcp 0.0.6 (git+https://github.com/Fantom-foundation/libtransport-tcp)" = "<none>"
 "checksum libvm 0.1.5 (git+https://github.com/Fantom-foundation/libvm)" = "<none>"
 "checksum lock_api 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f8912e782533a93a167888781b836336a6ca5da6175c05944c86cf28c31104dc"
 "checksum log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)" = "14b6052be84e6b71ab17edffc2eeabf5c2c3ae1fdb464aae35ac50c67a44e1f7"

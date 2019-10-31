@@ -11,7 +11,7 @@ ethereum-types = "0.8.0"
 failure = "0.1.6"
 libcommon-rs = { git = "https://github.com/Fantom-foundation/libcommon-rs", version = "0.0.1" }
 libconsensus = { git = "https://github.com/Fantom-foundation/libconsensus", version = "0.0.7" }
-libconsensus-dag = { git = "https://github.com/Fantom-foundation/libconsensus-dag", version = "0.0.15" }
+libconsensus-dag = { git = "https://github.com/Fantom-foundation/libconsensus-dag", version = "0.0.16" }
 # libconsensus-lachesis-rs = { git = "https://github.com/Fantom-foundation/libconsensus-lachesis-rs" }
 libcli = { git = "https://github.com/Fantom-foundation/libcli" }
 libhash-sha3 = { git = "https://github.com/Fantom-foundation/libhash-sha3", version = "0.1.1" }
