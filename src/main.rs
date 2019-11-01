@@ -77,28 +77,26 @@ fn main() {
     let mut threads = vec![];
     let mut counter = 0;
     for c in config_env.consensuses {
-        loop {
-          let t = std::thread::spawn(move || {
+        let t = std::thread::spawn(move || {
             let mut vm = DVM::default();
             let transaction: Transaction = Transaction {
-              nonce: 0.into(),
-              gas_price: 0.into(),
-              start_gas: 0.into(),
-              to: None,
-              value: 0.into(),
-              data: vec![0x60, 0xa + counter, 0x0],
-              v: 0.into(),
-              r: 0.into(),
-              s: 0.into(),
+                nonce: 0.into(),
+                gas_price: 0.into(),
+                start_gas: 0.into(),
+                to: None,
+                value: 0.into(),
+                data: vec![0x60, 0xa + counter, 0x0],
+                v: 0.into(),
+                r: 0.into(),
+                s: 0.into(),
             };
             vm.set_cpu(VM::new(vec![]));
             vm.set_consensus(c);
             vm.send_transaction(transaction).unwrap();
             vm.serve();
-          });
-          threads.push(t);
-          counter += 1;
-        }
+        });
+        threads.push(t);
+        counter += 1;
     }
 
     for t in threads {
