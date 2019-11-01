@@ -51,14 +51,6 @@ enum Opt {
 //  --port-increment <incr>     The increment. Defaults to 2. Must be > 1.
 //";
 
-/// Parses the command line arguments.
-//fn parse_args() -> Result<Config, docopt::Error> {
-//    Docopt::new(USAGE)?
-//        .version(Some(VERSION.to_string()))
-//        .parse()?
-//        .deserialize()
-//}
-
 fn main() {
     env_logger::init();
     info!("DAG consensus CLI version {}", VERSION);
@@ -73,7 +65,6 @@ fn main() {
             .collect(),
         // _ => unimplemented!(),
     };
-    debug!("peers: {:?}", peers);
 
     let config = Config {
         cwd: "./".to_string(),

@@ -55,22 +55,22 @@ impl Env {
             kp.push(Signature::<Hash>::generate_key_pair().unwrap());
             let net_addr = format!("{}:{}", LOCALHOST, config.serve_config.peers[i].port);
             let mut peer: DAGPeer<H160, PublicKey> =
-                DAGPeer::new(config.serve_config.peers[i].id.clone(), net_addr);
+                DAGPeer::new(config.serve_config.peers[i].id, net_addr);
             peer.set_public_key(kp[i].0.clone());
             peer_list.add(peer)?;
         }
 
         let mut consensuses = vec![];
-        for i in 0..n {
+        for (i, (pub_key, secret_key)) in kp.iter().enumerate().take(n) {
             let mut cfg: DAGconfig<H160, DAGData, SecretKey, PublicKey> = DAGconfig::new();
             cfg.peers = peer_list.clone();
             cfg.request_addr = format!("{}:{}", LOCALHOST, config.serve_config.peers[i].port);
             cfg.reply_addr = format!("{}:{}", LOCALHOST, config.serve_config.peers[i].port + 1);
             cfg.transport_type = libtransport::TransportType::TCP;
             cfg.store_type = libcommon_rs::store::StoreType::Sled;
-            cfg.creator = config.serve_config.peers[i].id.clone();
-            cfg.public_key = kp[i].0.clone();
-            cfg.secret_key = kp[i].1.clone();
+            cfg.creator = config.serve_config.peers[i].id;
+            cfg.public_key = pub_key.clone();
+            cfg.secret_key = secret_key.clone();
             consensuses.push(DAG::new(cfg)?);
         }
         Ok(Env { consensuses })
