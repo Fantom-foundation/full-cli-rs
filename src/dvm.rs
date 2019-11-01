@@ -41,14 +41,17 @@ impl<'a> DistributedVM<'a, VM, Opcode, DAGData, EnvDAG, H160> for DVM {
     }
 
     fn serve(mut self) {
-        if let Some(a) = &mut self.algorithm {
+        if let (Some(a), Some(c)) = (&mut self.algorithm, &mut self.cpu) {
             loop {
                 // FIXME: check for exit condition here and do exit when met
                 block_on(async {
-                    if let Some(tx) = a.next().await {
+                    if let Some((tx, peer)) = a.next().await {
                         // FIXME: we have received transaction tx from Consensus
                         // now we need to execute it on VM
-                        println!("Got transaction: {}", tx);
+                        println!("From {} got transaction: {}", peer, tx);
+                        c.set_transaction(tx, peer);
+                        c.execute().unwrap();
+                        c.print_registers(0, 3);
                     }
                 });
             }

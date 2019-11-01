@@ -7,6 +7,7 @@ use crate::config::ServeConfig;
 //use docopt::Docopt;
 use log::{debug, info};
 //use toml;
+use ethereum_types::H160;
 
 mod config;
 mod constants;
@@ -60,23 +61,23 @@ fn main() {
         serve_config: ServeConfig {
             peers: vec![
                 PeerConfig {
-                    id: "первый".to_string(),
+                    id: H160::random(),
                     port: 9001,
                 },
                 PeerConfig {
-                    id: "второй".to_string(),
+                    id: H160::random(),
                     port: 9003,
                 },
                 PeerConfig {
-                    id: "третий".to_string(),
+                    id: H160::random(),
                     port: 9005,
                 },
                 PeerConfig {
-                    id: "четвёртый".to_string(),
+                    id: H160::random(),
                     port: 9007,
                 },
                 PeerConfig {
-                    id: "поехали".to_string(),
+                    id: H160::random(),
                     port: 9009,
                 },
             ],
@@ -97,7 +98,7 @@ fn main() {
                 start_gas: 0.into(),
                 to: None,
                 value: 0.into(),
-                data: vec![0x60+counter],
+                data: vec![0x60 + counter],
                 v: 0.into(),
                 r: 0.into(),
                 s: 0.into(),
