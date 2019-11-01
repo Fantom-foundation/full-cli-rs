@@ -42,6 +42,8 @@ before_script:
       rustup component add clippy --toolchain "${TRAVIS_RUST_VERSION}${SMALLEST_COMPAT_RUST}"
     elif [ -n "$BUILD_FMT" ]; then
       rustup component add rustfmt --toolchain "${TRAVIS_RUST_VERSION}${SMALLEST_COMPAT_RUST}"
+    elif [ -n "$TESTNET" ]; then
+      cargo build
     fi
 script:
   - |
@@ -52,6 +54,8 @@ script:
       cargo clippy --all -- -D warnings
     elif [ -n "$CARGO_TEST" ]; then
       cargo test --all --features "$FEATURES"
+    elif [ -n "$TESTNET" ]; then
+      timeout --preserve-status 5m ./target/debug/full-cli-rs tester -n 3
     fi
 
 matrix:
@@ -64,9 +68,7 @@ matrix:
       env: CARGO_TEST=1
     - stage: testnet
       rust: nightly
-      script:
-        - cargo build  # --release
-        - timeout 1m ./target/debug/full-cli-rs tester -n 10
+      env: TESTNET=1
     - stage: notify-website
       rust: nightly
       env:
