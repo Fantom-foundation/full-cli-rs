@@ -7,7 +7,6 @@ use futures::executor::block_on;
 use futures::stream::StreamExt;
 use libconsensus::Consensus;
 use libvm::DistributedVM;
-use libconsensus_dag::DAGPeer;
 
 pub struct DVM {
     cpu: Option<VM>,
