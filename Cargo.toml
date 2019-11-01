@@ -14,7 +14,7 @@ libconsensus = { git = "https://github.com/Fantom-foundation/libconsensus", vers
 libconsensus-dag = { git = "https://github.com/Fantom-foundation/libconsensus-dag", version = "~0.0.19" }
 libcli = { git = "https://github.com/Fantom-foundation/libcli" }
 libhash-sha3 = { git = "https://github.com/Fantom-foundation/libhash-sha3", version = "~0.1.1" }
-libvm = { git = "https://github.com/Fantom-foundation/libvm", version = "~0.1.7" }
+libvm = { git = "https://github.com/Fantom-foundation/libvm", version = "~0.1.8" }
 log = "0.4.8"
 ring = "0.16.9"
 serde = "1.0.101"
