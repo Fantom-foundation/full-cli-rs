@@ -1,6 +1,6 @@
 [package]
 name = "full-cli-rs"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Samuel Marks <@SamuelMarks>"]
 edition = "2018"
 
@@ -26,3 +26,4 @@ futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
 libsignature = { git = "https://github.com/Fantom-foundation/libsignature", version="~0.2.0" }
 libsignature-ed25519-dalek = { git = "https://github.com/Fantom-foundation/libsignature-ed25519-dalek", version = "~0.2.2"}
 libtransport = { git = "https://github.com/Fantom-foundation/libtransport", version="~0.0.4" }
+structopt = "0.3.3"

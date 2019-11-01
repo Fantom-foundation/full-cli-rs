@@ -8,3 +8,4 @@
 *~
 *.bak
 Cargo.lock
+sled_store

@@ -1,25 +1,33 @@
-//#[macro_use]
-//extern crate serde;
-//use std::fs;
-
 use crate::config::PeerConfig;
 use crate::config::ServeConfig;
-//use docopt::Docopt;
-use log::{debug, info};
-//use toml;
+use crate::config::{Config, Env};
+use crate::dvm::DVM;
+
 use ethereum_types::H160;
+use log::{debug, info};
+use structopt::StructOpt;
 
 mod config;
 mod constants;
 mod dvm;
 
-use crate::config::{Config, Env};
-use crate::dvm::DVM;
+use crate::constants::DEFAULT_NODE_PORT;
 use evm_rs::transaction::Transaction;
 use evm_rs::vm::VM;
 use libvm::DistributedVM;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Fully-participating node")]
+enum Opt {
+    Tester {
+        #[structopt(short)]
+        /// Number of nodes to test with
+        n: usize,
+    },
+}
+
 //const USAGE: &str = "
 //DAG consensus CLI
 //
@@ -55,33 +63,21 @@ fn main() {
     env_logger::init();
     info!("DAG consensus CLI version {}", VERSION);
     //    let config = parse_args().unwrap_or_else(|e| e.exit());
+    let opt = Opt::from_args();
+    let peers: Vec<PeerConfig> = match opt {
+        Opt::Tester { n } => vec![0; n]
+            .iter()
+            .map(|i| PeerConfig {
+                id: H160::random(),
+                port: DEFAULT_NODE_PORT + *i as usize,
+            })
+            .collect(),
+        _ => unimplemented!(),
+    };
 
     let config = Config {
         cwd: "./".to_string(),
-        serve_config: ServeConfig {
-            peers: vec![
-                PeerConfig {
-                    id: H160::random(),
-                    port: 9001,
-                },
-                PeerConfig {
-                    id: H160::random(),
-                    port: 9003,
-                },
-                PeerConfig {
-                    id: H160::random(),
-                    port: 9005,
-                },
-                PeerConfig {
-                    id: H160::random(),
-                    port: 9007,
-                },
-                PeerConfig {
-                    id: H160::random(),
-                    port: 9009,
-                },
-            ],
-        },
+        serve_config: ServeConfig { peers },
     };
     debug!("Config: {:?}", config);
 
