@@ -50,8 +50,8 @@ impl<'a> DistributedVM<'a, VM, Opcode, DAGData, EnvDAG, H160> for DVM {
                         // now we need to execute it on VM
                         println!("From {} got transaction: {}", peer, tx);
                         c.set_transaction(tx, peer);
-                        c.execute().unwrap();
-                        c.print_registers(0, 3);
+                        c.execute_one().unwrap();
+                        c.print_registers(0, 5);
                     }
                 });
             }

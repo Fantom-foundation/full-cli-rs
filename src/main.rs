@@ -98,7 +98,7 @@ fn main() {
                 start_gas: 0.into(),
                 to: None,
                 value: 0.into(),
-                data: vec![0x60 + counter],
+                data: vec![0x60, 0xa + counter, 0x0],
                 v: 0.into(),
                 r: 0.into(),
                 s: 0.into(),
