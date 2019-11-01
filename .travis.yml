@@ -56,13 +56,19 @@ script:
 
 matrix:
   include:
-    - rust: stable
+    - rust: nightly
       env: BUILD_FMT=1
-    - rust: stable
+    - rust: nightly
       env: CLIPPY=1
-    - rust: stable
+    - rust: nightly
       env: CARGO_TEST=1
+    - stage: testnet
+      rust: nightly
+      script:
+        - cargo build  # --release
+        - timeout 1m ./target/debug/full-cli-rs tester -n 10
     - stage: notify-website
+      rust: nightly
       env:
         secure: 'R58SWJSqutrjl+CMSwJbc/zJObVdNKy9Ai3XM28YitgoLDDbiLO7RIjSYU6Y9XS5X3+z0Qg0xgLODRSUYWd5la3EXmYnTsrv/Ehc6IHXeJ6sWDlRyyfYV1Mn5aNHwKEU0HToD5nq1FpCgAdmBrS2jMupmkBqWS5ajL/4yWNwNGHinsUxR12M6cgHPZrOMZJVt+DBQhYMIF7m+r6cSeyJJPfNnSNZ6nuOP7KOywAovnS0rEKmHsgpT7g7psWQ1OzVXINJXPJ26ZPCw8dqgn/Pd3oe2NhaDpZLyQCLrm+rBPmMv+IzLpPRHDJRYrPsOgdHXwNqfIcCwoJ4aMRUUmyS4stb2F4lvOSQWhGexAhytsRiD3kagZjBRMCk0m6iDtcuq4aOtf5w1P4FV794YquEnAm/SygFV9oq7vaf1titN/FgbEX3BnJHdZi+sn7fsbPWLhZZJchG67pj++MjDkla6JmYiP7Qc6YMbheUuyk3kRrgpSVBnB3C9vQGVO0RhcxpMa4uYdu0C/4yEmLXGpQ14F9G+CoI9F0N6F6Ny5o4TVdDzGRaGQf30hCoT/aXKCl87k4OoK+3oMYTjtTsCBjtyEYJ8f8yQcObCRd8aIxu13du+MTBhH8gYvuZMoY7DiuDtE6wTDeRGYWBsCanLyme3yAd4dUixzy0S3z525/p5Ps='
       script:

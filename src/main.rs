@@ -1,21 +1,20 @@
-use crate::config::PeerConfig;
-use crate::config::ServeConfig;
-use crate::config::{Config, Env};
-use crate::dvm::DVM;
-
 use ethereum_types::H160;
 use log::{debug, info};
 use structopt::StructOpt;
+
+use evm_rs::transaction::Transaction;
+use evm_rs::vm::VM;
+use libvm::DistributedVM;
 
 mod config;
 mod constants;
 mod dvm;
 
+use crate::config::PeerConfig;
+use crate::config::ServeConfig;
+use crate::config::{Config, Env};
 use crate::constants::DEFAULT_NODE_PORT;
-use evm_rs::transaction::Transaction;
-use evm_rs::vm::VM;
-use libvm::DistributedVM;
-use failure::_core::f64::consts::E;
+use crate::dvm::DVM;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
