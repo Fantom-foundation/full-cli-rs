@@ -55,7 +55,7 @@ script:
     elif [ -n "$CARGO_TEST" ]; then
       cargo test --all --features "$FEATURES"
     elif [ -n "$TESTNET" ]; then
-      timeout --preserve-status 5m ./target/debug/full-cli-rs tester -n 3
+      timeout --preserve-status 2m ./target/debug/full-cli-rs tester -n 5 || true
     fi
 
 matrix:
