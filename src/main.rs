@@ -15,6 +15,7 @@ use crate::constants::DEFAULT_NODE_PORT;
 use evm_rs::transaction::Transaction;
 use evm_rs::vm::VM;
 use libvm::DistributedVM;
+use failure::_core::f64::consts::E;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -65,15 +66,15 @@ fn main() {
     //    let config = parse_args().unwrap_or_else(|e| e.exit());
     let opt = Opt::from_args();
     let peers: Vec<PeerConfig> = match opt {
-        Opt::Tester { n } => vec![0; n]
-            .iter()
+        Opt::Tester { n } => (0..n)
             .map(|i| PeerConfig {
                 id: H160::random(),
-                port: DEFAULT_NODE_PORT + *i as usize,
+                port: DEFAULT_NODE_PORT + i * 2,
             })
             .collect(),
-        _ => unimplemented!(),
+        // _ => unimplemented!(),
     };
+    debug!("peers: {:?}", peers);
 
     let config = Config {
         cwd: "./".to_string(),
