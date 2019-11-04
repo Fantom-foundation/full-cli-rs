@@ -15,7 +15,7 @@ use crate::config::{Config, Env};
 use crate::constants::DEFAULT_NODE_PORT;
 use crate::dvm::DVM;
 use evm_rs::transaction::Transaction;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -58,7 +58,7 @@ fn main() {
     //    let config = parse_args().unwrap_or_else(|e| e.exit());
     let opt = Opt::from_args();
     let peers: Vec<PeerConfig> = match opt {
-        Opt::Tester { n } => (0..n)
+        Opt::Tester { n } => (0..=n)
             .map(|i| PeerConfig {
                 id: H160::random(),
                 port: DEFAULT_NODE_PORT + i * 2,
@@ -66,6 +66,8 @@ fn main() {
             .collect(),
         // _ => unimplemented!(),
     };
+
+    let n = peers.len() - 1;
 
     let config = Config {
         cwd: "./".to_string(),
@@ -76,41 +78,54 @@ fn main() {
     let config_env = Env::new(config).unwrap();
 
     let mut threads = Vec::new();
-    let vm_senders = Arc::new(Mutex::new(Vec::new()));
 
-    for c in config_env.consensuses {
-        let vm_senders_local = vm_senders.clone();
+    let init_vm = |c| {
+        let (mut vm, stopper) = DVM::new();
+        vm.set_cpu(VM::new(vec![]));
+        vm.set_consensus(c);
+        (vm, move || {
+            stopper.send(()).unwrap();
+        })
+    };
+
+    let mut stoppers = Vec::new();
+    let mut c_it = config_env.consensuses.into_iter();
+    for _i in 0..n {
+        let c = c_it.next().unwrap();
+        let (st_tx, st_rx) = mpsc::channel();
         let t = std::thread::spawn(move || {
-            let (mut vm, tx) = DVM::new();
-            vm.set_cpu(VM::new(vec![]));
-            vm.set_consensus(c);
-
-            let mut vm_senders_g = vm_senders_local.lock().unwrap();
-            vm_senders_g.push(tx);
-
+            let (vm, stopper) = init_vm(c);
+            st_tx.send(stopper).unwrap();
             vm.serve();
         });
+
         threads.push(t);
+        if let Ok(stopper) = st_rx.recv() {
+            stoppers.push(stopper);
+        }
     }
 
-    let vm_senders_g = vm_senders.lock().unwrap();
-    let vm_senders = &*vm_senders_g;
-    let mut counter = 0;
-    for sender in vm_senders {
+    let (mut tx_vm, tx_stopper) = init_vm(c_it.next().unwrap());
+
+    for i in 0..n {
         let transaction = Transaction {
             nonce: 0.into(),
             gas_price: 0.into(),
             start_gas: 0.into(),
             to: None,
             value: 0.into(),
-            data: vec![0x60, 0xa + counter, 0x0],
+            data: vec![0x60, 0xa + (i as u8), 0x0],
             v: 0.into(),
             r: 0.into(),
             s: 0.into(),
         };
-        sender.unbounded_send(transaction);
-        counter += 1;
+        tx_vm.send_transaction(transaction).unwrap();
     }
+
+    for s in stoppers {
+        s();
+    }
+    tx_stopper();
 
     for t in threads {
         t.join().unwrap();
