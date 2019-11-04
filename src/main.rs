@@ -2,7 +2,6 @@ use ethereum_types::H160;
 use log::{debug, info};
 use structopt::StructOpt;
 
-use evm_rs::transaction::Transaction;
 use evm_rs::vm::VM;
 use libvm::DistributedVM;
 
@@ -10,11 +9,12 @@ mod config;
 mod constants;
 mod dvm;
 
-use crate::config::PeerConfig;
 use crate::config::ServeConfig;
 use crate::config::{Config, Env};
+use crate::config::{EnvDAG, PeerConfig};
 use crate::constants::DEFAULT_NODE_PORT;
 use crate::dvm::DVM;
+use std::thread::JoinHandle;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -74,34 +74,30 @@ fn main() {
 
     let config_env = Env::new(config).unwrap();
 
-    let mut threads = vec![];
-    let mut counter = 0;
+    let mut vms = Vec::new();
+    let mut vm_senders = Vec::new();
+
     for c in config_env.consensuses {
-        let t = std::thread::spawn(move || {
-            let mut vm = DVM::default();
-            let transaction: Transaction = Transaction {
-                nonce: 0.into(),
-                gas_price: 0.into(),
-                start_gas: 0.into(),
-                to: None,
-                value: 0.into(),
-                data: vec![0x60, 0xa + counter, 0x0],
-                v: 0.into(),
-                r: 0.into(),
-                s: 0.into(),
-            };
-            vm.set_cpu(VM::new(vec![]));
-            vm.set_consensus(c);
-            vm.send_transaction(transaction).unwrap();
-            vm.serve();
-        });
-        threads.push(t);
-        counter += 1;
+        let (mut vm, tx) = DVM::new();
+        vm.set_cpu(VM::new(vec![]));
+        vm.set_consensus(c);
+        vms.push(vm);
+        vm_senders.push(tx);
     }
+
+    let threads: Vec<JoinHandle<()>> = vms
+        .into_iter()
+        .map(|v| {
+            std::thread::spawn(move || {
+                v.serve();
+            })
+        })
+        .collect();
 
     for t in threads {
         t.join().unwrap();
     }
+
     /*
 
     let peer_list = instantiate peer list (initial peers)?;
