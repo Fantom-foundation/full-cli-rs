@@ -1,7 +1,6 @@
 use ethereum_types::H160;
 use evm_rs::transaction::Transaction;
 use evm_rs::vm::{Opcode, VM};
-use failure::Error;
 use futures::channel::mpsc;
 use futures::executor::block_on;
 use futures::pin_mut;
@@ -31,13 +30,6 @@ impl DVM {
             tx,
         );
     }
-
-    pub fn send_transaction(&mut self, transaction: Transaction) -> Result<(), Error> {
-        if let Some(a) = &mut self.algorithm {
-            a.send_transaction(transaction)?;
-        }
-        Ok(())
-    }
 }
 
 impl<'a> DistributedVM<'a, VM, Opcode, DAGData, EnvDAG, H160> for DVM {
@@ -54,28 +46,24 @@ impl<'a> DistributedVM<'a, VM, Opcode, DAGData, EnvDAG, H160> for DVM {
             loop {
                 // FIXME: check for exit condition here and do exit when met
                 let send_local = self.rx.next().fuse();
-
-                let exec_incoming = async {
-                    if let Some((tx, peer)) = consensus.next().await {
-                        // FIXME: we have received transaction tx from Consensus
-                        // now we need to execute it on VM
-                        println!("From {} got transaction: {}", peer, tx);
-                        cpu.set_transaction(tx, peer);
-                        cpu.execute_one().unwrap();
-                        cpu.print_registers(0, 5);
-                    }
-                }
-                .fuse();
+                let exec_incoming = consensus.next().fuse();
 
                 pin_mut!(send_local, exec_incoming);
 
                 block_on(async {
                     select! {
                         local_tx = send_local => {
-
+                            consensus.send_transaction(local_tx.unwrap()).unwrap();
                         },
                         incoming_tx = exec_incoming => {
-
+                            if let Some((tx, peer)) = incoming_tx {
+                                // FIXME: we have received transaction tx from Consensus
+                                // now we need to execute it on VM
+                                println!("From {} got transaction: {}", peer, tx);
+                                cpu.set_transaction(tx, peer);
+                                cpu.execute_one().unwrap();
+                                cpu.print_registers(0, 5);
+                            }
                         }
                     }
                 });

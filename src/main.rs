@@ -9,12 +9,13 @@ mod config;
 mod constants;
 mod dvm;
 
+use crate::config::PeerConfig;
 use crate::config::ServeConfig;
 use crate::config::{Config, Env};
-use crate::config::{EnvDAG, PeerConfig};
 use crate::constants::DEFAULT_NODE_PORT;
 use crate::dvm::DVM;
-use std::thread::JoinHandle;
+use evm_rs::transaction::Transaction;
+use std::sync::{Arc, Mutex};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -74,25 +75,42 @@ fn main() {
 
     let config_env = Env::new(config).unwrap();
 
-    let mut vms = Vec::new();
-    let mut vm_senders = Vec::new();
+    let mut threads = Vec::new();
+    let vm_senders = Arc::new(Mutex::new(Vec::new()));
 
     for c in config_env.consensuses {
-        let (mut vm, tx) = DVM::new();
-        vm.set_cpu(VM::new(vec![]));
-        vm.set_consensus(c);
-        vms.push(vm);
-        vm_senders.push(tx);
+        let vm_senders_local = vm_senders.clone();
+        let t = std::thread::spawn(move || {
+            let (mut vm, tx) = DVM::new();
+            vm.set_cpu(VM::new(vec![]));
+            vm.set_consensus(c);
+
+            let mut vm_senders_g = vm_senders_local.lock().unwrap();
+            vm_senders_g.push(tx);
+
+            vm.serve();
+        });
+        threads.push(t);
     }
 
-    let threads: Vec<JoinHandle<()>> = vms
-        .into_iter()
-        .map(|v| {
-            std::thread::spawn(move || {
-                v.serve();
-            })
-        })
-        .collect();
+    let vm_senders_g = vm_senders.lock().unwrap();
+    let vm_senders = &*vm_senders_g;
+    let mut counter = 0;
+    for sender in vm_senders {
+        let transaction = Transaction {
+            nonce: 0.into(),
+            gas_price: 0.into(),
+            start_gas: 0.into(),
+            to: None,
+            value: 0.into(),
+            data: vec![0x60, 0xa + counter, 0x0],
+            v: 0.into(),
+            r: 0.into(),
+            s: 0.into(),
+        };
+        sender.unbounded_send(transaction);
+        counter += 1;
+    }
 
     for t in threads {
         t.join().unwrap();
